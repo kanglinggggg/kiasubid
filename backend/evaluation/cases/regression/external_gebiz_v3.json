@@ -1,0 +1,291 @@
+[
+  {
+    "id": "external-01-positive-public-gates",
+    "partition": "REGRESSION",
+    "source_case_id": "1",
+    "title": "Positive control - known public gates satisfied",
+    "description": "Public notice states a BCA registration threshold, compulsory attendance, and two-envelope attachments.",
+    "source": "GeBIZ_Agent_Test_Cases_FINAL_v3.docx / LTA000ETT26000057",
+    "evaluation_as_of": "2026-07-10T16:00:00+08:00",
+    "kind": "REQUIREMENT",
+    "requirement_input": {
+      "document_name": "LTA000ETT26000057-public-notice.html",
+      "page": 1,
+      "section": "Opportunity Details / Critical Criteria, Submission, Site Briefing",
+      "text": "Tenderers must hold BCA workhead CR11 at financial grade L2 and above. Attendance at the Tender Briefing and Site Showround is compulsory and tenderers who do not attend will not be considered. At least one attachment must be uploaded in each of the Price and Technical envelopes.",
+      "stable_key_hint": "EXT-01"
+    },
+    "change_input": null,
+    "deterministic_scenario": null,
+    "expected": {
+      "requirement_type": "COMPLIANCE",
+      "gate_type": "MANDATORY",
+      "structured_fields": {"compulsory": true, "registration_code": "CR11", "minimum_financial_grade": "L2"},
+      "ambiguity_state": "INTERPRETED",
+      "affected_requirement": null,
+      "change_type": null,
+      "final_operational_state": "FEASIBLE"
+    }
+  },
+  {
+    "id": "external-02-missed-compulsory-briefing",
+    "partition": "REGRESSION",
+    "source_case_id": "2",
+    "title": "Missed compulsory briefing and site showround",
+    "description": "Attendance is stated as compulsory and non-attendees will not be considered.",
+    "source": "GeBIZ_Agent_Test_Cases_FINAL_v3.docx / LTA000ETT26000057",
+    "evaluation_as_of": "2026-07-10T16:00:00+08:00",
+    "kind": "REQUIREMENT",
+    "requirement_input": {
+      "document_name": "LTA000ETT26000057-public-notice.html",
+      "page": 1,
+      "section": "Site Briefing / Attendance Compulsory / Remarks",
+      "text": "Attendance at the 19 June 2026 Tender Briefing and Site Showround is compulsory. Tenderers who do not attend will not be considered.",
+      "stable_key_hint": "EXT-02"
+    },
+    "change_input": null,
+    "deterministic_scenario": null,
+    "expected": {
+      "requirement_type": "ELIGIBILITY",
+      "gate_type": "MANDATORY",
+      "structured_fields": {"compulsory": true, "attendance_required": true},
+      "ambiguity_state": "INTERPRETED",
+      "affected_requirement": null,
+      "change_type": null,
+      "final_operational_state": "BLOCKED"
+    }
+  },
+  {
+    "id": "external-03-clearance-remediation-window",
+    "partition": "REGRESSION",
+    "source_case_id": "3",
+    "title": "Clearance form remediation window",
+    "description": "Drawings access requires a clearance form and the public notice states a minimum four-week processing period.",
+    "source": "GeBIZ_Agent_Test_Cases_FINAL_v3.docx / LTA000ETT26000049",
+    "evaluation_as_of": "2026-07-01T16:00:00+08:00",
+    "kind": "REQUIREMENT",
+    "requirement_input": {
+      "document_name": "LTA000ETT26000049-public-notice.html",
+      "page": 1,
+      "section": "Opportunity Details / TERM NDA & CLEARANCE FORM",
+      "text": "Tenderers must submit the Clearance Form before drawings access can be granted. Clearance processing requires a minimum of four (4) weeks.",
+      "stable_key_hint": "EXT-03"
+    },
+    "change_input": null,
+    "deterministic_scenario": null,
+    "expected": {
+      "requirement_type": "DOCUMENT",
+      "gate_type": "MANDATORY",
+      "structured_fields": {"compulsory": true, "minimum_processing_weeks": 4},
+      "ambiguity_state": "INTERPRETED",
+      "affected_requirement": null,
+      "change_type": null,
+      "final_operational_state": "RECOVERABLE"
+    }
+  },
+  {
+    "id": "external-04-bca-qualification",
+    "partition": "REGRESSION",
+    "source_case_id": "4",
+    "title": "Mandatory BCA qualification",
+    "description": "The public critical criteria states alternative BCA workhead and grade thresholds.",
+    "source": "GeBIZ_Agent_Test_Cases_FINAL_v3.docx / LTA000ETT26000049",
+    "evaluation_as_of": "2026-07-01T16:00:00+08:00",
+    "kind": "REQUIREMENT",
+    "requirement_input": {
+      "document_name": "LTA000ETT26000049-public-notice.html",
+      "page": 1,
+      "section": "Opportunity Details / CRITICAL CRITERIA",
+      "text": "Tenderers must be registered under BCA workhead CW01 at financial grade B1 and above, or under workhead ME15 at financial grade L6.",
+      "stable_key_hint": "EXT-04"
+    },
+    "change_input": null,
+    "deterministic_scenario": null,
+    "expected": {
+      "requirement_type": "COMPLIANCE",
+      "gate_type": "MANDATORY",
+      "structured_fields": {"compulsory": true, "alternative_registration_allowed": true},
+      "ambiguity_state": "INTERPRETED",
+      "affected_requirement": null,
+      "change_type": null,
+      "final_operational_state": "BLOCKED"
+    }
+  },
+  {
+    "id": "external-05-price-attachment",
+    "partition": "REGRESSION",
+    "source_case_id": "5",
+    "title": "Two-envelope attachment completeness",
+    "description": "The public notice requires attachment uploads in both Price and Technical envelopes.",
+    "source": "GeBIZ_Agent_Test_Cases_FINAL_v3.docx / LTA000ETT26000057",
+    "evaluation_as_of": "2026-07-10T16:00:00+08:00",
+    "kind": "REQUIREMENT",
+    "requirement_input": {
+      "document_name": "LTA000ETT26000057-public-notice.html",
+      "page": 1,
+      "section": "Opportunity Details / Submission",
+      "text": "It is mandatory to upload at least one attachment in the Price envelope and at least one attachment in the Technical envelope.",
+      "stable_key_hint": "EXT-05"
+    },
+    "change_input": null,
+    "deterministic_scenario": null,
+    "expected": {
+      "requirement_type": "DOCUMENT",
+      "gate_type": "MANDATORY",
+      "structured_fields": {"compulsory": true, "price_attachment_required": true, "technical_attachment_required": true},
+      "ambiguity_state": "INTERPRETED",
+      "affected_requirement": null,
+      "change_type": null,
+      "final_operational_state": "RECOVERABLE"
+    }
+  },
+  {
+    "id": "external-06-shortlist-restriction",
+    "partition": "REGRESSION",
+    "source_case_id": "6",
+    "title": "Shortlisted-team participation restriction",
+    "description": "Only teams shortlisted under the named exercise may participate.",
+    "source": "GeBIZ_Agent_Test_Cases_FINAL_v3.docx / NPB000ETT26000087",
+    "evaluation_as_of": "2026-08-01T16:00:00+08:00",
+    "kind": "REQUIREMENT",
+    "requirement_input": {
+      "document_name": "NPB000ETT26000087-public-notice.html",
+      "page": 1,
+      "section": "Opportunity Details / Remarks",
+      "text": "Only the five multi-disciplinary consultant teams shortlisted under NParks/E/1/2026 can participate in this tender.",
+      "stable_key_hint": "EXT-06"
+    },
+    "change_input": null,
+    "deterministic_scenario": null,
+    "expected": {
+      "requirement_type": "ELIGIBILITY",
+      "gate_type": "MANDATORY",
+      "structured_fields": {"compulsory": true, "shortlist_reference": "NParks/E/1/2026"},
+      "ambiguity_state": "INTERPRETED",
+      "affected_requirement": null,
+      "change_type": null,
+      "final_operational_state": "BLOCKED"
+    }
+  },
+  {
+    "id": "external-07-gra-criticality-unclear",
+    "partition": "REGRESSION",
+    "source_case_id": "7",
+    "title": "GRA registration criticality unavailable",
+    "description": "Public metadata mentions a registration but the missing tender documents are needed to determine criticality.",
+    "source": "GeBIZ_Agent_Test_Cases_FINAL_v3.docx / SPO000ETT26000022",
+    "evaluation_as_of": "2026-07-01T16:00:00+08:00",
+    "kind": "REQUIREMENT",
+    "requirement_input": {
+      "document_name": "SPO000ETT26000022-public-notice.html",
+      "page": 1,
+      "section": "Opportunity Details / GRA Supply Work Heads / Tender Documents",
+      "text": "The public notice lists GRA supply/work head EPU/FBV/10. Please refer to the tender documents. The tender documents are unavailable, so the public notice does not state whether this registration is mandatory, non-critical, or exemptible.",
+      "stable_key_hint": "EXT-07"
+    },
+    "change_input": null,
+    "deterministic_scenario": null,
+    "expected": {
+      "requirement_type": "COMPLIANCE",
+      "gate_type": "INFORMATIONAL",
+      "structured_fields": {"compulsory": null, "registration_code": "EPU/FBV/10"},
+      "ambiguity_state": "UNCERTAIN",
+      "affected_requirement": null,
+      "change_type": null,
+      "final_operational_state": "UNCERTAIN"
+    }
+  },
+  {
+    "id": "external-08-corrigendum-content-unavailable",
+    "partition": "REGRESSION",
+    "source_case_id": "8",
+    "title": "Corrigendum content unavailable",
+    "description": "The public page signals a corrigendum but the authoritative contents have not been ingested.",
+    "source": "GeBIZ_Agent_Test_Cases_FINAL_v3.docx / LTA000ETT26000055",
+    "evaluation_as_of": "2026-08-23T13:00:00+08:00",
+    "kind": "CORRIGENDUM",
+    "requirement_input": null,
+    "change_input": {
+      "existing_requirement": {
+        "stable_key": "CORPUS-FRESHNESS",
+        "text": "The current tender corpus is the latest authoritative version.",
+        "requirement_type": "DOCUMENT",
+        "gate_type": "MANDATORY",
+        "deadline": null,
+        "minimum_count": null,
+        "certification": null,
+        "compulsory": true,
+        "interpretation_status": "INTERPRETED",
+        "uncertainty_reason": null,
+        "source": {
+          "document": "LTA000ETT26000055-cached-snapshot.html",
+          "page": 1,
+          "section": "Cached pre-corrigendum state",
+          "snippet": "Cached pre-corrigendum state"
+        }
+      },
+      "corrigendum_document": "LTA000ETT26000055-corrigendum-unavailable.pdf",
+      "page": 1,
+      "section": "CORRIGENDUM / TENDER DOCUMENTS",
+      "text": ""
+    },
+    "deterministic_scenario": null,
+    "expected": {
+      "requirement_type": "DOCUMENT",
+      "gate_type": "MANDATORY",
+      "structured_fields": {},
+      "ambiguity_state": "UNCERTAIN",
+      "affected_requirement": null,
+      "change_type": "UNCHANGED",
+      "final_operational_state": "UNCERTAIN"
+    }
+  },
+  {
+    "id": "external-09-deposit-deadline-corrigendum",
+    "partition": "REGRESSION",
+    "source_case_id": "9",
+    "title": "Tender deposit deadline amended",
+    "description": "A published corrigendum moves the governing tender-deposit deadline.",
+    "source": "GeBIZ_Agent_Test_Cases_FINAL_v3.docx / NEA April 2026 hawker-stall tender",
+    "evaluation_as_of": "2026-04-22T16:00:00+08:00",
+    "kind": "CORRIGENDUM",
+    "requirement_input": null,
+    "change_input": {
+      "existing_requirement": {
+        "stable_key": "EXT-09",
+        "text": "Pay a tender deposit of $500 before the tender closing date and time.",
+        "requirement_type": "DEADLINE",
+        "gate_type": "MANDATORY",
+        "deadline": "2026-04-27T10:30:00+08:00",
+        "minimum_count": null,
+        "certification": null,
+        "compulsory": true,
+        "structured_fields": [
+          {"name": "deposit_amount_sgd", "value": 500}
+        ],
+        "interpretation_status": "INTERPRETED",
+        "uncertainty_reason": null,
+        "source": {
+          "document": "NEA-April-2026-tender-notice.pdf",
+          "page": 13,
+          "section": "Tender deposit",
+          "snippet": "pay a tender deposit of $500 before the tender closing date and time"
+        }
+      },
+      "corrigendum_document": "NEA-April-2026-Corrigendum-No-1.pdf",
+      "page": 1,
+      "section": "S/N 1-2",
+      "text": "The tender deposit of $500 must be paid latest by 5 May 2026, 5.00pm."
+    },
+    "deterministic_scenario": null,
+    "expected": {
+      "requirement_type": "DEADLINE",
+      "gate_type": "MANDATORY",
+      "structured_fields": {"deadline": "2026-05-05T17:00:00+08:00"},
+      "ambiguity_state": "INTERPRETED",
+      "affected_requirement": "EXT-09",
+      "change_type": "MODIFIED",
+      "final_operational_state": "RECOVERABLE"
+    }
+  }
+]

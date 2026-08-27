@@ -1,0 +1,314 @@
+[
+  {
+    "id": "external-01-positive-public-gates",
+    "source_case_id": "1",
+    "title": "Positive control - known public gates satisfied",
+    "source": "GeBIZ_Agent_Test_Cases_FINAL_v3.docx",
+    "evaluation_as_of": "2026-07-10T16:00:00+08:00",
+    "rules": [
+      {
+        "rule": {
+          "kind": "QUALIFICATION",
+          "options": [{"code": "CR11", "minimum_grade": "L2"}],
+          "match": "ANY",
+          "compulsory": true
+        },
+        "facts": {
+          "kind": "QUALIFICATION",
+          "evidence": [
+            {
+              "code": "CR11",
+              "grade": "L3",
+              "verified": true,
+              "meets_minimum": true
+            }
+          ],
+          "can_obtain_before_deadline": false
+        }
+      },
+      {
+        "rule": {
+          "kind": "EVENT_ATTENDANCE",
+          "event_name": "Tender Briefing and Site Showround",
+          "compulsory": true,
+          "event_at": "2026-06-19T10:00:00+08:00"
+        },
+        "facts": {
+          "kind": "EVENT_ATTENDANCE",
+          "attended": true,
+          "attendance_opportunity_open": false,
+          "makeup_available": false
+        }
+      },
+      {
+        "rule": {
+          "kind": "REQUIRED_DOCUMENT",
+          "documents": ["Price attachment", "Technical attachment"],
+          "match": "ALL",
+          "compulsory": true
+        },
+        "facts": {
+          "kind": "REQUIRED_DOCUMENT",
+          "documents": [
+            {"name": "Price attachment", "state": "SUBMITTED"},
+            {"name": "Technical attachment", "state": "SUBMITTED"}
+          ],
+          "submission_open": true
+        }
+      }
+    ],
+    "expected": {
+      "requirement_result": "SATISFIED",
+      "operational_status": "FEASIBLE"
+    }
+  },
+  {
+    "id": "external-02-missed-compulsory-briefing",
+    "source_case_id": "2",
+    "title": "Missed compulsory briefing and site showround",
+    "source": "GeBIZ_Agent_Test_Cases_FINAL_v3.docx",
+    "evaluation_as_of": "2026-07-10T16:00:00+08:00",
+    "rules": [
+      {
+        "rule": {
+          "kind": "EVENT_ATTENDANCE",
+          "event_name": "Tender Briefing and Site Showround",
+          "compulsory": true,
+          "event_at": "2026-06-19T10:00:00+08:00"
+        },
+        "facts": {
+          "kind": "EVENT_ATTENDANCE",
+          "attended": false,
+          "attendance_opportunity_open": false,
+          "makeup_available": false
+        }
+      }
+    ],
+    "expected": {
+      "requirement_result": "UNMET",
+      "operational_status": "BLOCKED"
+    }
+  },
+  {
+    "id": "external-03-clearance-remediation-window",
+    "source_case_id": "3",
+    "title": "Clearance form remediation window",
+    "source": "GeBIZ_Agent_Test_Cases_FINAL_v3.docx",
+    "evaluation_as_of": "2026-07-01T16:00:00+08:00",
+    "rules": [
+      {
+        "rule": {
+          "kind": "PROCESSING_WINDOW",
+          "action": "Submit Clearance Form and obtain drawings clearance",
+          "deadline": "2026-07-31T16:00:00+08:00",
+          "minimum_processing_hours": 672,
+          "compulsory": true
+        },
+        "facts": {
+          "kind": "PROCESSING_WINDOW",
+          "completed": false,
+          "can_complete": true,
+          "earliest_start_at": "2026-07-01T16:00:00+08:00",
+          "estimated_duration_hours": 672
+        }
+      }
+    ],
+    "expected": {
+      "requirement_result": "UNMET",
+      "operational_status": "RECOVERABLE"
+    }
+  },
+  {
+    "id": "external-04-bca-qualification",
+    "source_case_id": "4",
+    "title": "Mandatory BCA qualification cannot be obtained in time",
+    "source": "GeBIZ_Agent_Test_Cases_FINAL_v3.docx",
+    "evaluation_as_of": "2026-07-01T16:00:00+08:00",
+    "rules": [
+      {
+        "rule": {
+          "kind": "QUALIFICATION",
+          "options": [
+            {"code": "CW01", "minimum_grade": "B1"},
+            {"code": "ME15", "minimum_grade": "L6"}
+          ],
+          "match": "ANY",
+          "compulsory": true
+        },
+        "facts": {
+          "kind": "QUALIFICATION",
+          "evidence": [
+            {"code": "CW01", "grade": null, "verified": true, "meets_minimum": false},
+            {"code": "ME15", "grade": null, "verified": true, "meets_minimum": false}
+          ],
+          "can_obtain_before_deadline": false
+        }
+      }
+    ],
+    "expected": {
+      "requirement_result": "UNMET",
+      "operational_status": "BLOCKED"
+    }
+  },
+  {
+    "id": "external-05-price-attachment",
+    "source_case_id": "5",
+    "title": "Mandatory Price attachment omitted",
+    "source": "GeBIZ_Agent_Test_Cases_FINAL_v3.docx",
+    "evaluation_as_of": "2026-07-10T16:00:00+08:00",
+    "rules": [
+      {
+        "rule": {
+          "kind": "REQUIRED_DOCUMENT",
+          "documents": ["Price attachment", "Technical attachment"],
+          "match": "ALL",
+          "compulsory": true
+        },
+        "facts": {
+          "kind": "REQUIRED_DOCUMENT",
+          "documents": [
+            {"name": "Price attachment", "state": "READY"},
+            {"name": "Technical attachment", "state": "SUBMITTED"}
+          ],
+          "submission_open": true
+        }
+      }
+    ],
+    "expected": {
+      "requirement_result": "PARTIAL",
+      "operational_status": "RECOVERABLE"
+    }
+  },
+  {
+    "id": "external-06-shortlist-restriction",
+    "source_case_id": "6",
+    "title": "Shortlisted-team participation restriction",
+    "source": "GeBIZ_Agent_Test_Cases_FINAL_v3.docx",
+    "evaluation_as_of": "2026-08-01T16:00:00+08:00",
+    "rules": [
+      {
+        "rule": {
+          "kind": "PARTICIPATION_RESTRICTION",
+          "restriction": "Must be one of the five shortlisted consultant teams",
+          "compulsory": true
+        },
+        "facts": {
+          "kind": "PARTICIPATION_RESTRICTION",
+          "eligible": false,
+          "can_become_eligible_before_deadline": false
+        }
+      }
+    ],
+    "expected": {
+      "requirement_result": "UNMET",
+      "operational_status": "BLOCKED"
+    }
+  },
+  {
+    "id": "external-07-gra-criticality-unclear",
+    "source_case_id": "7",
+    "title": "GRA registration criticality unavailable",
+    "source": "GeBIZ_Agent_Test_Cases_FINAL_v3.docx",
+    "evaluation_as_of": "2026-07-01T16:00:00+08:00",
+    "rules": [
+      {
+        "rule": {
+          "kind": "QUALIFICATION",
+          "options": [{"code": "EPU/FBV/10", "minimum_grade": null}],
+          "match": "ANY",
+          "compulsory": null
+        },
+        "facts": {
+          "kind": "QUALIFICATION",
+          "evidence": [
+            {
+              "code": "EPU/FBV/10",
+              "grade": null,
+              "verified": true,
+              "meets_minimum": false
+            }
+          ],
+          "can_obtain_before_deadline": null
+        }
+      }
+    ],
+    "expected": {
+      "requirement_result": "UNCERTAIN",
+      "operational_status": "UNCERTAIN"
+    }
+  },
+  {
+    "id": "external-08-corrigendum-content-unavailable",
+    "source_case_id": "8",
+    "title": "Corrigendum content unavailable",
+    "source": "GeBIZ_Agent_Test_Cases_FINAL_v3.docx",
+    "evaluation_as_of": "2026-08-23T13:00:00+08:00",
+    "rules": [
+      {
+        "rule": {
+          "kind": "SOURCE_FRESHNESS",
+          "source_name": "Current tender and corrigendum corpus",
+          "latest_version_required": true
+        },
+        "facts": {
+          "kind": "SOURCE_FRESHNESS",
+          "latest_version_ingested": false,
+          "change_notice_present": true,
+          "change_content_available": false
+        }
+      }
+    ],
+    "expected": {
+      "requirement_result": "UNCERTAIN",
+      "operational_status": "UNCERTAIN"
+    }
+  },
+  {
+    "id": "external-09-deposit-deadline-corrigendum",
+    "source_case_id": "9",
+    "title": "Tender deposit deadline amended",
+    "source": "GeBIZ_Agent_Test_Cases_FINAL_v3.docx",
+    "evaluation_as_of": "2026-04-22T16:00:00+08:00",
+    "rules": [
+      {
+        "rule": {
+          "kind": "PROCESSING_WINDOW",
+          "action": "Pay the tender deposit",
+          "deadline": "2026-05-05T17:00:00+08:00",
+          "minimum_processing_hours": 0,
+          "compulsory": true
+        },
+        "facts": {
+          "kind": "PROCESSING_WINDOW",
+          "completed": false,
+          "can_complete": true,
+          "earliest_start_at": "2026-04-30T09:00:00+08:00",
+          "estimated_duration_hours": 0
+        }
+      }
+    ],
+    "prior_rules": [
+      {
+        "rule": {
+          "kind": "PROCESSING_WINDOW",
+          "action": "Pay the tender deposit",
+          "deadline": "2026-04-27T10:30:00+08:00",
+          "minimum_processing_hours": 0,
+          "compulsory": true
+        },
+        "facts": {
+          "kind": "PROCESSING_WINDOW",
+          "completed": false,
+          "can_complete": true,
+          "earliest_start_at": "2026-04-30T09:00:00+08:00",
+          "estimated_duration_hours": 0
+        }
+      }
+    ],
+    "expected": {
+      "requirement_result": "UNMET",
+      "operational_status": "RECOVERABLE",
+      "prior_operational_status": "BLOCKED"
+    }
+  }
+]

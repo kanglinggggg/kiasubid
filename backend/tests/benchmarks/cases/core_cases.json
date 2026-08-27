@@ -1,0 +1,61 @@
+[
+  {
+    "id": "certified-staff-satisfied",
+    "description": "Three available staff have valid certificates and current CVs.",
+    "tender_closing_at": "2026-08-28T09:00:00",
+    "requirement": {
+      "stable_key": "B01",
+      "text": "Provide at least three personnel holding valid CISSP certification.",
+      "rule_config": {"kind": "certified_staff", "certification": "CISSP", "minimum_count": 3}
+    },
+    "employees": [
+      {"id": "A", "name": "Engineer A", "availability_status": "AVAILABLE"},
+      {"id": "B", "name": "Engineer B", "availability_status": "AVAILABLE"},
+      {"id": "C", "name": "Engineer C", "availability_status": "AVAILABLE"}
+    ],
+    "evidence": [
+      {"id": "A-CERT", "type": "EMPLOYEE_CERTIFICATION", "title": "A CISSP", "subject_id": "A", "verification_status": "VERIFIED", "valid_until": "2027-08-28T09:00:00", "details": {"certification": "CISSP"}},
+      {"id": "A-CV", "type": "CV", "title": "A CV", "subject_id": "A", "verification_status": "VERIFIED"},
+      {"id": "B-CERT", "type": "EMPLOYEE_CERTIFICATION", "title": "B CISSP", "subject_id": "B", "verification_status": "VERIFIED", "valid_until": "2027-08-28T09:00:00", "details": {"certification": "CISSP"}},
+      {"id": "B-CV", "type": "CV", "title": "B CV", "subject_id": "B", "verification_status": "VERIFIED"},
+      {"id": "C-CERT", "type": "EMPLOYEE_CERTIFICATION", "title": "C CISSP", "subject_id": "C", "verification_status": "VERIFIED", "valid_until": "2027-08-28T09:00:00", "details": {"certification": "CISSP"}},
+      {"id": "C-CV", "type": "CV", "title": "C CV", "subject_id": "C", "verification_status": "VERIFIED"}
+    ],
+    "expected": {"assessment_status": "SATISFIED", "operational_status": "FEASIBLE", "usable_employee_count": 3, "recovery_candidate_count": 0}
+  },
+  {
+    "id": "certified-staff-blocked",
+    "description": "Four staff are mandatory but only three can be proven and no recovery candidate exists.",
+    "tender_closing_at": "2026-08-28T09:00:00",
+    "requirement": {
+      "stable_key": "B02",
+      "text": "Provide at least four personnel holding valid CISSP certification.",
+      "rule_config": {"kind": "certified_staff", "certification": "CISSP", "minimum_count": 4}
+    },
+    "employees": [
+      {"id": "A", "name": "Engineer A", "availability_status": "AVAILABLE"},
+      {"id": "B", "name": "Engineer B", "availability_status": "AVAILABLE"},
+      {"id": "C", "name": "Engineer C", "availability_status": "AVAILABLE"}
+    ],
+    "evidence": [
+      {"id": "A-CERT", "type": "EMPLOYEE_CERTIFICATION", "title": "A CISSP", "subject_id": "A", "verification_status": "VERIFIED", "valid_until": "2027-08-28T09:00:00", "details": {"certification": "CISSP"}},
+      {"id": "A-CV", "type": "CV", "title": "A CV", "subject_id": "A", "verification_status": "VERIFIED"},
+      {"id": "B-CERT", "type": "EMPLOYEE_CERTIFICATION", "title": "B CISSP", "subject_id": "B", "verification_status": "VERIFIED", "valid_until": "2027-08-28T09:00:00", "details": {"certification": "CISSP"}},
+      {"id": "B-CV", "type": "CV", "title": "B CV", "subject_id": "B", "verification_status": "VERIFIED"},
+      {"id": "C-CERT", "type": "EMPLOYEE_CERTIFICATION", "title": "C CISSP", "subject_id": "C", "verification_status": "VERIFIED", "valid_until": "2027-08-28T09:00:00", "details": {"certification": "CISSP"}},
+      {"id": "C-CV", "type": "CV", "title": "C CV", "subject_id": "C", "verification_status": "VERIFIED"}
+    ],
+    "expected": {"assessment_status": "UNMET", "operational_status": "BLOCKED", "usable_employee_count": 3, "recovery_candidate_count": 0}
+  },
+  {
+    "id": "ambiguous-mandatory-clause",
+    "description": "An undefined mandatory staffing threshold must remain uncertain.",
+    "tender_closing_at": "2026-08-28T09:00:00",
+    "requirement": {
+      "stable_key": "B03",
+      "text": "Maintain adequate suitably qualified standby resources.",
+      "rule_config": {"kind": "ambiguous"}
+    },
+    "expected": {"assessment_status": "UNCERTAIN", "operational_status": "UNCERTAIN", "usable_employee_count": 0, "recovery_candidate_count": 0}
+  }
+]
