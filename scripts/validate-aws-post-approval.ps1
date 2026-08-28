@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
     [string]$ModelId,
+    [switch]$PromptValidatedJson,
     [switch]$SkipBlindEvaluation
 )
 
@@ -64,7 +65,14 @@ if ($configuredRegion -and $configuredRegion -ne $officialRegion) {
 [Environment]::SetEnvironmentVariable("AWS_DEFAULT_REGION", $officialRegion, "Process")
 [Environment]::SetEnvironmentVariable("AWS_REGION", $officialRegion, "Process")
 [Environment]::SetEnvironmentVariable("LLM_PROVIDER", "bedrock", "Process")
-[Environment]::SetEnvironmentVariable("BEDROCK_STRUCTURED_OUTPUT", "true", "Process")
+if ($PromptValidatedJson) {
+    [Environment]::SetEnvironmentVariable("BEDROCK_STRUCTURED_OUTPUT", "false", "Process")
+} elseif (-not [Environment]::GetEnvironmentVariable("BEDROCK_STRUCTURED_OUTPUT", "Process")) {
+    [Environment]::SetEnvironmentVariable("BEDROCK_STRUCTURED_OUTPUT", "true", "Process")
+}
+$nativeStructuredOutput = (
+    [Environment]::GetEnvironmentVariable("BEDROCK_STRUCTURED_OUTPUT", "Process") -ne "false"
+)
 
 if ($ModelId) {
     [Environment]::SetEnvironmentVariable("BEDROCK_MODEL_ID", $ModelId, "Process")
@@ -148,7 +156,11 @@ if (-not $selectedFoundation -and -not $selectedProfile) {
     throw "The configured BEDROCK_MODEL_ID is not one of the discovered cheap on-demand candidates."
 }
 
-Write-Host "3/6 Running one minimal validated structured-output inference..."
+if (-not $nativeStructuredOutput) {
+    Write-Host "3/6 Running prompted JSON with strict local Pydantic validation..."
+} else {
+    Write-Host "3/6 Running one native Bedrock JSON-schema structured-output inference..."
+}
 Write-Host "4/6 Running Bedrock -> R17 -> deterministic FEASIBLE to RECOVERABLE validation..."
 Push-Location (Join-Path $projectRoot "backend")
 try {

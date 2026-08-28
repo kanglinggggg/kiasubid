@@ -110,10 +110,16 @@ class BedrockConverseClient:
     def generate_json(
         self, *, system: str, prompt: str, schema: dict[str, Any], schema_name: str
     ) -> str:
+        effective_prompt = prompt
+        if not self._settings.bedrock_structured_output:
+            effective_prompt = (
+                f"{prompt}\n\nOUTPUT JSON SCHEMA ({schema_name}):\n"
+                f"{json.dumps(_bedrock_schema(schema), ensure_ascii=False)}"
+            )
         request: dict[str, Any] = {
             "modelId": self.model_id,
             "system": [{"text": system}],
-            "messages": [{"role": "user", "content": [{"text": prompt}]}],
+            "messages": [{"role": "user", "content": [{"text": effective_prompt}]}],
             "inferenceConfig": {"maxTokens": 2500, "temperature": 0},
         }
         if self._settings.bedrock_structured_output:

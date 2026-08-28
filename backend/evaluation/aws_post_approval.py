@@ -91,6 +91,11 @@ def run() -> dict[str, object]:
         "provider": "BEDROCK",
         "model_id": app_settings.bedrock_model_id,
         "region": app_settings.aws_default_region,
+        "structured_output_mode": (
+            "BEDROCK_NATIVE_JSON_SCHEMA"
+            if app_settings.bedrock_structured_output
+            else "PROMPTED_JSON_PLUS_PYDANTIC"
+        ),
         "minimal_structured_output": {
             "status": "PASS",
             "requirement_type": smoke_requirement.requirement_type,

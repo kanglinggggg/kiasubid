@@ -156,6 +156,12 @@ candidates, rejects provisioned model identifiers, runs a minimal validated inte
 the live Bedrock-to-R17-to-`RECOVERABLE` path, and runs the known live-model regression. If the
 temporary credentials have expired, refresh them locally and rerun; the script never prints them.
 
+Use `BEDROCK_STRUCTURED_OUTPUT=true` only with a model that actually supports Bedrock's native
+`outputConfig` JSON Schema feature. For compatible on-demand models such as the sandbox's Nova Lite
+v1, `BEDROCK_STRUCTURED_OUTPUT=false` supplies the schema in the untrusted-data-safe prompt and
+still requires strict local Pydantic and exact-provenance validation. Reports distinguish these
+modes; prompted JSON must not be described as Bedrock-native constrained decoding.
+
 For temporary Groq validation, set `LLM_PROVIDER=groq`, `GROQ_API_KEY`, and either
 `GROQ_MODEL_ID` or its supported alias `GROQ_MODEL`. Model IDs are never guessed. With no valid
 selected-provider configuration, or when a provider call fails, the canonical rule-based fallback
@@ -269,8 +275,10 @@ BidOps supports internal preparation and operational verification. It does not c
   GeBIZ connection or automatic submission path.
 - The HTTP interpretation boundary accepts extracted page/section text. PDF upload and OCR are not
   part of this frozen MVP.
-- Live-model quality is unmeasured until an authorized Bedrock or Groq credential and an explicit
-  model ID are supplied. The UI remains in clearly labelled Demo fallback mode without them.
+- Live Bedrock validation uses `amazon.nova-lite-v1:0` in `us-east-1`. The canonical R17 change and
+  both known corrigendum cases passed, but exact requirement extraction scored 0/7 and ambiguity
+  handling 6/9 on the known regression set. Native JSON-schema output with Claude Haiku 4.5 remains
+  under AWS account verification; Nova Lite uses prompted JSON plus strict local validation.
 - The nine structured GeBIZ-derived cases are a deterministic regression set that informed
   development, not an unseen-AI accuracy claim.
 - SQLite is appropriate for the local single-user demonstration, not a multi-user production

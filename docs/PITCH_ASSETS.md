@@ -99,7 +99,10 @@ and source freshness.
 | Deterministic requirement-result accuracy | 9/9 (100%) |
 | Deterministic overall bid-status accuracy | 9/9 (100%) |
 | Unsupported cases | 0 |
-| Live interpretation accuracy | Not run—sandbox credentials/model unavailable |
+| Live requirement interpretation | 0/7 exact matches on known regression cases |
+| Live corrigendum matching | 2/2 on known regression cases |
+| Live ambiguity handling | 6/9 on known regression cases |
+| Live canonical R17 transition | PASS with `amazon.nova-lite-v1:0` |
 | Genuinely blind AI performance | Not claimed—blind folder intentionally empty |
 
 These nine cases informed development. The 100% result is a regression claim about deterministic
@@ -107,8 +110,9 @@ rules, not unseen model accuracy.
 
 ## Current limitations
 
-- Live Bedrock quality is unmeasured until the AWS lease is active and temporary credentials plus
-  an explicit cheap on-demand model ID are configured.
+- Live Bedrock results are mixed: Nova Lite passed the R17 and known corrigendum cases but failed
+  all seven exact requirement-extraction expectations. Native structured output with Claude Haiku
+  4.5 remains under AWS new-account verification.
 - The canonical data and documents are synthetic.
 - The product accepts extracted page/section text; PDF upload, OCR, and live GeBIZ retrieval are
   not implemented.

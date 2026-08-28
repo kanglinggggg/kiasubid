@@ -13,12 +13,13 @@ Date: 28 August 2026 (Asia/Singapore)
 - Backend: `http://127.0.0.1:8000`
 - API documentation: `http://127.0.0.1:8000/docs`
 - Selected provider: Bedrock
-- Provider status: not configured; Demo fallback only
+- Selected model: `amazon.nova-lite-v1:0`
+- Provider status: live Bedrock invocation verified in `us-east-1`
+- Structured-output mode: prompted JSON schema plus strict local Pydantic/provenance validation
 
-`AWS_PROFILE`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`,
-`BEDROCK_MODEL_ID`, `GROQ_API_KEY`, `GROQ_MODEL_ID`, and `GROQ_MODEL` are blank in the local
-`.env`. No AWS access key, AWS secret key, or Groq key was found at
-process, user, or machine environment scope. No live provider call was attempted.
+Temporary AWS access-key, secret-key, and session-token fields are populated only in the ignored
+local `.env`. Their presence was checked without printing their values. The configured temporary
+credentials expire approximately every 12 hours. Groq remains unconfigured.
 
 ## Repository and secret safety
 
@@ -54,12 +55,12 @@ Fresh results from the final tree:
 | Check | Result |
 |---|---:|
 | Ruff | PASS |
-| Backend pytest | 48 passed |
+| Backend pytest | 49 passed |
 | Frontend Vitest | 4 passed in 2 files |
 | TypeScript (`tsc -b`) | PASS |
 | Vite production build | PASS; 1,674 modules transformed |
 | npm audit | 0 known vulnerabilities |
-| Provider boundary tests | 19 passed as part of the backend suite |
+| Provider boundary tests | 20 passed as part of the backend suite |
 
 Pytest reports 42 third-party deprecation warnings from LangGraph/Starlette under Python 3.14; no
 project test failed. The production frontend bundle completed successfully.
@@ -86,39 +87,54 @@ verified by the production corrigendum workflow, where R17 v1 remains stored as 
 
 ## Live-model interpretation evaluation
 
-Report: `data/evaluation/live_report.json`
-
-**NOT RUN — external credential/model access unavailable.**
+Report: `data/evaluation/live_regression_report.json`
 
 - Provider: Bedrock
-- Provider configured: false
-- Total known regression records discovered: 9
-- Requirement interpretation accuracy: not measured
-- Corrigendum matching accuracy: not measured
-- Ambiguity handling accuracy: not measured
-- Final operational-state accuracy: not measured
-- Fabricated scores: none
+- Model: `amazon.nova-lite-v1:0`
+- Provider configured and invoked: true
+- Total known regression records: 9
+- Requirement interpretation accuracy: 0/7 (0%)
+- Corrigendum matching accuracy: 2/2 (100%)
+- Ambiguity handling accuracy: 6/9 (66.67%)
+- Final operational-state accuracy: `NOT_RUN` for all nine because these interpretation records do
+  not include downstream adapters
+- Unsafe-green errors: 0
+- Genuinely blind cases: 0; no unseen score claimed
 
-Bedrock and Groq request construction, mode attribution, JSON-schema/Pydantic validation, repair
-retry, graceful fallback, and incomplete-configuration handling are covered by mocked tests. Groq
-accepts either `GROQ_MODEL_ID` or `GROQ_MODEL`. A live provider name is displayed only when that
-provider produced the persisted interpretation event.
+Failures were not hidden. Seven requirement cases failed expected extraction. Two were rejected
+after both validation attempts: one returned the unsupported top-level type `QUALIFICATION`, and
+one produced a `PROCESSING_WINDOW` without its required deadline. Five returned valid structures
+whose expected type, gate, or structured fields did not match. The unclear GRA criticality case
+also incorrectly returned `INTERPRETED` instead of `UNCERTAIN`, producing one ambiguity-handling
+error. No prompts or ground truth were changed after observing these results.
+
+Separately, the live canonical R17 path passed: Bedrock interpreted the natural-language
+corrigendum as `MODIFIED`, matched R17, returned `minimum_count 3 -> 4`, and the deterministic
+workflow produced `FEASIBLE -> RECOVERABLE` and `8/8 -> 7/8`.
 
 ## AWS hackathon access preparation
 
-- The official access guide was reviewed and the single Hackathon 2026 lease request progressed
-  through the human-controlled authentication, Terms, and submission steps. Approval remains
-  pending; no AWS API call was attempted without active lease credentials.
+- The single Hackathon 2026 lease is active. STS identity succeeded with the temporary sandbox
+  role, and the region was verified as `us-east-1`.
 - AWS CLI 2.36.30 is installed.
 - The application and `.env.example` use the official `us-east-1` region.
 - Ignored `.env` fields support the lease's temporary access key, secret key, and session token;
   incomplete credential sets fail closed.
 - Temporary credential wiring is covered by tests without exposing secret values.
-- `scripts/validate-aws-post-approval.ps1` is ready to verify STS and `us-east-1`, discover only
-  cheap on-demand Nova Micro/Lite or Claude Haiku candidates, reject provisioned identifiers, run
-  a minimal structured inference, prove the Bedrock-to-R17 transition, and rerun live evaluation.
-- STS, model discovery, inference, and live evaluation remain pending until the lease is approved
-  and temporary credentials plus an explicit discovered model ID are provided locally.
+- Model discovery found Nova Micro and Nova Lite as active on-demand foundation models, plus active
+  system inference profiles for Nova and Claude Haiku variants. No provisioned throughput or
+  infrastructure was created.
+- Native JSON-schema output was attempted with
+  `us.anthropic.claude-haiku-4-5-20251001-v1:0`, but AWS rejected Converse while the new account's
+  Anthropic access remained under verification. Nova Lite was reachable, but v1 does not support
+  Bedrock's native `outputConfig` field.
+- The selected fallback is `amazon.nova-lite-v1:0` with its schema included in the prompt, followed
+  by strict Pydantic and exact-source validation. This is a real Bedrock invocation but is not
+  described as Bedrock-native constrained decoding.
+- The minimal live requirement smoke test passed as `DOCUMENT / MANDATORY / INTERPRETED` with
+  validated source provenance.
+- The browser was observed changing from **Interpretation: Demo fallback** before the invocation
+  to **Interpretation: Bedrock** only after the live R17 interpretation was persisted.
 
 ## Visual QA
 
@@ -260,6 +276,9 @@ No clearly bad local latency was observed.
 3. Ignore rules now explicitly cover generic root `node_modules/`, `dist/`, and `*.pyc` paths.
 4. Provider configuration now accepts the requested `GROQ_MODEL` variable as an alias for
    `GROQ_MODEL_ID`, with a unit test and `.env.example` documentation.
+5. Bedrock's non-native structured-output setting previously omitted the supplied JSON schema from
+   the model prompt. It now includes the cleaned schema and remains protected by Pydantic,
+   provenance validation, and repair retry; a provider-boundary test covers this path.
 
 ## Blind evaluation support
 
@@ -274,11 +293,12 @@ operational state, and list unsafe-green errors. No unseen performance was manuf
 
 ## Remaining external blockers and limitations
 
-- The Hackathon 2026 AWS lease is awaiting external approval; temporary credentials and an
-  explicit accessible Bedrock model ID are therefore unavailable.
+- AWS native JSON-schema output with Claude Haiku 4.5 remains blocked by AWS's new-account
+  verification. Nova Lite v1 works through prompted JSON plus local validation.
 - No authorized Groq API key/model is configured.
-- Consequently, live interpretation quality and the natural-language-to-R17 live-provider proof
-  remain externally blocked.
+- Requirement-extraction quality on the known live regression is not release-ready: 0/7 exact
+  extraction matches, including one unsafe ambiguity decision. Corrigendum matching and the R17
+  live-provider proof passed, but this does not erase the extraction failures.
 - PDF upload/OCR and multi-user production hardening are intentionally outside the frozen MVP.
 
 ## Final readiness classification
@@ -287,9 +307,10 @@ operational state, and list unsafe-green errors. No unseen performance was manuf
 |---|---|
 | LOCAL ENGINEERING MVP | READY |
 | DETERMINISTIC DEMO | READY |
-| LIVE LLM VALIDATION | BLOCKED |
+| LIVE LLM VALIDATION | READY — executed; failures documented |
 | HACKATHON DEMO WITHOUT LIVE PROVIDER | READY |
 | FULL INTENDED HACKATHON STACK | BLOCKED |
 
-The only blocker to live-model validation is external credential/model access. The local,
-deterministic, visually verified fallback build is ready to freeze.
+The local deterministic demo remains ready. The live R17 story is verified with Nova Lite, but the
+full intended live interpretation layer remains blocked from a readiness claim by poor requirement
+extraction results and pending native structured-output access for Haiku 4.5.

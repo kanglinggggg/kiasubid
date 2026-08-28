@@ -106,6 +106,39 @@ def test_bedrock_rejects_partial_temporary_credentials():
         BedrockConverseClient(app_settings)._runtime()
 
 
+def test_bedrock_prompt_validated_mode_supplies_schema_without_output_config():
+    captured: dict[str, Any] = {}
+
+    class FakeRuntime:
+        def converse(self, **request: Any) -> dict[str, Any]:
+            captured.update(request)
+            return {"output": {"message": {"content": [{"text": '{"value": "ok"}'}]}}}
+
+    app_settings = Settings(
+        bedrock_model_id="amazon.nova-lite-v1:0",
+        bedrock_structured_output=False,
+    )
+    client = BedrockConverseClient(app_settings)
+    client._client = FakeRuntime()
+    output = client.generate_json(
+        system="Return JSON.",
+        prompt="Extract a value.",
+        schema={
+            "type": "object",
+            "properties": {"value": {"type": "string"}},
+            "required": ["value"],
+            "additionalProperties": False,
+        },
+        schema_name="smoke",
+    )
+
+    assert json.loads(output) == {"value": "ok"}
+    assert "outputConfig" not in captured
+    message = captured["messages"][0]["content"][0]["text"]
+    assert "OUTPUT JSON SCHEMA (smoke)" in message
+    assert '"required": ["value"]' in message
+
+
 def test_groq_model_environment_alias_is_supported():
     app_settings = Settings(
         llm_provider="groq",

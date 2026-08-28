@@ -114,9 +114,10 @@ Coverage as preparation completeness, not a compliance score.
 ## Does the demo depend on AWS being available?
 
 No. The canonical synthetic fixture is a clearly labelled **Interpretation: Demo fallback**, so
-the deterministic product story remains reliable offline. The UI may display **Interpretation:
-Bedrock** only when Bedrock actually produced the persisted interpretation. Live quality remains
-unmeasured until the approved sandbox credentials and an explicit on-demand model ID are supplied.
+the deterministic product story remains reliable offline. With the active sandbox, Nova Lite has
+also completed the live R17 path; the UI changed to **Interpretation: Bedrock** only after that
+result was persisted. Current live quality is mixed: corrigendum matching passed 2/2 known cases,
+while exact requirement extraction failed 7/7 known cases and must not be overclaimed.
 
 ## What evidence do you have today?
 
@@ -125,6 +126,9 @@ unmeasured until the approved sandbox credentials and an explicit on-demand mode
 - a 9/9 GeBIZ-derived deterministic regression benchmark across the six generic rule types;
 - mocked Bedrock/Groq boundaries, malformed-output, provenance, ambiguity, injection, semantic
   isolation, duplicate, and R17 end-to-end tests;
+- a real Nova Lite Bedrock smoke test and live R17 `FEASIBLE → RECOVERABLE` transition;
+- a live known-regression result of 0/7 requirement extraction, 2/2 corrigendum matching, and 6/9
+  ambiguity handling, with every failure retained;
 - saved desktop and mobile QA screenshots and three repeatable canonical demo runs.
 
 The nine cases informed development. They are not presented as unseen model accuracy. The blind
@@ -132,8 +136,11 @@ folder is empty by design until a teammate supplies genuinely unseen cases.
 
 ## What are the current limitations?
 
-- Live Bedrock interpretation has not run because the hackathon lease is not yet active and no
-  temporary credentials/model ID are configured.
+- Nova Lite v1 does not support Bedrock-native `outputConfig`; it uses prompted JSON followed by
+  strict Pydantic and provenance validation. Claude Haiku 4.5 native structured output remains
+  blocked by AWS new-account verification.
+- Live requirement extraction is not release-ready on the known regression set (0/7 exact
+  matches), even though live corrigendum matching and the R17 hero path passed.
 - The demo uses synthetic tender, company, evidence, and personnel data.
 - Input is extracted page/section text; PDF upload, OCR, and live GeBIZ retrieval are outside scope.
 - Extraction completeness and model quality still require live and genuinely blind evaluation.
