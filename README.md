@@ -278,7 +278,8 @@ BidOps supports internal preparation and operational verification. It does not c
 - Live Bedrock validation uses `amazon.nova-lite-v1:0` in `us-east-1`. The canonical R17 change and
   both known corrigendum cases passed, but exact requirement extraction scored 0/7 and ambiguity
   handling 6/9 on the known regression set. Native JSON-schema output with Claude Haiku 4.5 remains
-  under AWS account verification; Nova Lite uses prompted JSON plus strict local validation.
+  unavailable because the sandbox role lacks `aws-marketplace:ViewSubscriptions` and
+  `aws-marketplace:Subscribe`; Nova Lite uses prompted JSON plus strict local validation.
 - The nine structured GeBIZ-derived cases are a deterministic regression set that informed
   development, not an unseen-AI accuracy claim.
 - SQLite is appropriate for the local single-user demonstration, not a multi-user production

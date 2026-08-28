@@ -112,7 +112,7 @@ rules, not unseen model accuracy.
 
 - Live Bedrock results are mixed: Nova Lite passed the R17 and known corrigendum cases but failed
   all seven exact requirement-extraction expectations. Native structured output with Claude Haiku
-  4.5 remains under AWS new-account verification.
+  4.5 is unavailable because the sandbox role lacks required Marketplace subscription actions.
 - The canonical data and documents are synthetic.
 - The product accepts extracted page/section text; PDF upload, OCR, and live GeBIZ retrieval are
   not implemented.

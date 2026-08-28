@@ -138,7 +138,7 @@ folder is empty by design until a teammate supplies genuinely unseen cases.
 
 - Nova Lite v1 does not support Bedrock-native `outputConfig`; it uses prompted JSON followed by
   strict Pydantic and provenance validation. Claude Haiku 4.5 native structured output remains
-  blocked by AWS new-account verification.
+  blocked because the sandbox role lacks the required AWS Marketplace subscription actions.
 - Live requirement extraction is not release-ready on the known regression set (0/7 exact
   matches), even though live corrigendum matching and the R17 hero path passed.
 - The demo uses synthetic tender, company, evidence, and personnel data.

@@ -126,8 +126,9 @@ workflow produced `FEASIBLE -> RECOVERABLE` and `8/8 -> 7/8`.
   infrastructure was created.
 - Native JSON-schema output was attempted with
   `us.anthropic.claude-haiku-4-5-20251001-v1:0`, but AWS rejected Converse while the new account's
-  Anthropic access remained under verification. Nova Lite was reachable, but v1 does not support
-  Bedrock's native `outputConfig` field.
+  sandbox role lacked the required `aws-marketplace:ViewSubscriptions` and
+  `aws-marketplace:Subscribe` actions needed to enable this third-party model. Nova Lite was
+  reachable, but v1 does not support Bedrock's native `outputConfig` field.
 - The selected fallback is `amazon.nova-lite-v1:0` with its schema included in the prompt, followed
   by strict Pydantic and exact-source validation. This is a real Bedrock invocation but is not
   described as Bedrock-native constrained decoding.
@@ -293,8 +294,9 @@ operational state, and list unsafe-green errors. No unseen performance was manuf
 
 ## Remaining external blockers and limitations
 
-- AWS native JSON-schema output with Claude Haiku 4.5 remains blocked by AWS's new-account
-  verification. Nova Lite v1 works through prompted JSON plus local validation.
+- AWS native JSON-schema output with Claude Haiku 4.5 remains blocked because the sandbox role
+  lacks the Marketplace subscription actions required to enable that model. Nova Lite v1 works
+  through prompted JSON plus local validation.
 - No authorized Groq API key/model is configured.
 - Requirement-extraction quality on the known live regression is not release-ready: 0/7 exact
   extraction matches, including one unsafe ambiguity decision. Corrigendum matching and the R17
@@ -313,4 +315,4 @@ operational state, and list unsafe-green errors. No unseen performance was manuf
 
 The local deterministic demo remains ready. The live R17 story is verified with Nova Lite, but the
 full intended live interpretation layer remains blocked from a readiness claim by poor requirement
-extraction results and pending native structured-output access for Haiku 4.5.
+extraction results and unavailable Marketplace permissions for Haiku 4.5.
