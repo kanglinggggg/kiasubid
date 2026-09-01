@@ -116,10 +116,10 @@ Coverage as preparation completeness, not a compliance score.
 No. The canonical synthetic fixture is a clearly labelled **Interpretation: Demo fallback**, so
 the deterministic product story remains reliable offline. With the active sandbox, Nova Lite has
 also completed the live R17 path; the UI changed to **Interpretation: Bedrock** only after that
-result was persisted. The preserved 28 August live baseline is mixed: corrigendum matching passed
-2/2 known cases, while exact requirement extraction failed 7/7 known cases. Generic hardening is
-locally verified, but the post-hardening rerun is `NOT_RUN` until temporary credentials are
-refreshed.
+result was persisted. The post-hardening known regression remains mixed: exact requirement
+interpretation passed 4/7, corrigendum matching passed 2/2, ambiguity handling passed 9/9, and
+final operational state passed 6/9. The frozen blind set scored 2/8, not applicable, 7/8, and 4/8
+respectively, with zero unsafe-green errors.
 
 ## What evidence do you have today?
 
@@ -129,24 +129,28 @@ refreshed.
 - mocked Bedrock/Groq boundaries, malformed-output, provenance, ambiguity, injection, semantic
   isolation, duplicate, and R17 end-to-end tests;
 - a real Nova Lite Bedrock smoke test and live R17 `FEASIBLE → RECOVERABLE` transition;
-- a preserved live known-regression baseline of 0/7 requirement extraction, 2/2 corrigendum
-  matching, and 6/9 ambiguity handling, with every failure retained;
+- a live post-hardening known regression of 4/7 requirement interpretation, 2/2 corrigendum
+  matching, 9/9 ambiguity handling, and 6/9 final state, with every failure retained;
+- a frozen eight-case blind result of 2/8 requirement interpretation, 7/8 ambiguity handling, and
+  4/8 final state, with zero unsafe-green errors;
 - saved desktop and mobile QA screenshots and three repeatable canonical demo runs.
 
-The nine cases informed development. They are not presented as unseen model accuracy. The blind
-folder ships only a non-loaded template until a teammate supplies genuinely unseen cases.
+The nine regression cases informed development and are not presented as unseen model accuracy.
+The separate U1-U8 blind cases were frozen before their first successful model run and were not
+used to tune production prompts after scoring.
 
 ## What are the current limitations?
 
 - Nova Lite v1 does not support Bedrock-native `outputConfig`; it uses prompted JSON followed by
   strict Pydantic and provenance validation. Claude Haiku 4.5 native structured output remains
   blocked because the sandbox role lacks the required AWS Marketplace subscription actions.
-- The previous live requirement-extraction baseline was not release-ready (0/7 exact matches).
-  Generic fixes are locally verified, but no improved score is claimed before a fresh-credential
-  post-hardening rerun; live corrigendum matching and the R17 hero path remain the positive proof.
+- Exact requirement interpretation remains the main limitation: 4/7 on known regression and 2/8
+  on the frozen blind set. Corrigendum matching, ambiguity safety, zero unsafe-green outcomes, and
+  the R17 hero path are the stronger live results.
 - The demo uses synthetic tender, company, evidence, and personnel data.
 - Input is extracted page/section text; PDF upload, OCR, and live GeBIZ retrieval are outside scope.
-- Extraction completeness and model quality still require live and genuinely blind evaluation.
+- Extraction completeness remains below release quality and still requires human review and
+  broader independent evaluation.
 - SQLite and the local single-user process are demonstration architecture, not production
   multi-user deployment.
 - There is no authentication, proposal generation, pricing optimization, competitor intelligence,

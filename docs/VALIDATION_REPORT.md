@@ -1,6 +1,6 @@
 # Final pre-freeze validation report
 
-Date: 1 September 2026 (Asia/Singapore)
+Date: 2 September 2026 (Asia/Singapore)
 
 ## Environment
 
@@ -14,8 +14,8 @@ Date: 1 September 2026 (Asia/Singapore)
 - API documentation: `http://127.0.0.1:8000/docs`
 - Selected provider: Bedrock
 - Selected model: `amazon.nova-lite-v1:0`
-- Provider status: live Bedrock invocation previously verified in `us-east-1`; the current
-  temporary token is expired and the post-hardening rerun is correctly reported as `NOT_RUN`
+- Provider status: live Bedrock invocation, R17 flow, known regression, and frozen blind evaluation
+  verified in `us-east-1` with valid temporary credentials
 - Structured-output mode: prompted JSON schema plus strict local Pydantic/provenance validation
 
 Temporary AWS access-key, secret-key, and session-token fields are populated only in the ignored
@@ -94,40 +94,46 @@ Current report: `data/evaluation/live_regression_report.json`
 - Model: `amazon.nova-lite-v1:0`
 - Provider configured: true
 - Total known regression records: 9
-- Current requirement interpretation accuracy: `NOT_RUN`
-- Current corrigendum matching accuracy: `NOT_RUN`
-- Current ambiguity handling accuracy: `NOT_RUN`
-- Current final operational-state accuracy: `NOT_RUN`
+- Current requirement interpretation accuracy: 4/7 (57.14%)
+- Current corrigendum matching accuracy: 2/2 (100%)
+- Current ambiguity handling accuracy: 9/9 (100%)
+- Current final operational-state accuracy: 6/9 (66.67%)
 - Unsafe-green errors: 0
-- Genuinely blind cases: 8 frozen teammate-supplied records; current score `NOT_RUN`
+- Provider blockers: 0
+- Genuinely blind cases: 8 frozen teammate-supplied records
 
-The 1 September post-hardening rerun stopped after the first call returned
-`ExpiredTokenException`. The harness now records this as a provider blocker and leaves all accuracy
-denominators unmeasured instead of misclassifying credential failure as extraction failure.
+Known-regression failures were retained exactly: extraction errors in cases 1, 5, and 7;
+deterministic final-state mismatches in cases 1 and 5; and a deadline final-state mismatch in case
+9. The model failed closed to `UNCERTAIN` for every final-state mismatch, rather than producing an
+unsafe green result.
 
 Current blind report: `data/evaluation/blind_report.json`
 
 - Source set: `GeBIZ_Unseen_Test_Cases_Blind_and_Key.docx`, U1-U8
 - Provider/model: Bedrock / `amazon.nova-lite-v1:0`
 - Total frozen blind records: 8
-- Requirement interpretation: `NOT_RUN` (8)
+- Requirement interpretation: 2/8 (25%)
 - Corrigendum matching: `NOT_APPLICABLE` (8 requirement-only cases)
-- Ambiguity handling: `NOT_RUN` (8)
-- Final operational state: `NOT_RUN` (8)
+- Ambiguity handling: 7/8 (87.5%)
+- Final operational state: 4/8 (50%)
 - Unsafe-green errors: 0
-- Provider blocker: `UnrecognizedClientException` because the temporary AWS session token is invalid
+- Provider blockers: 0
 
 The blind source passages and evaluator-only answers were frozen before the first call. Expected
 answers and deterministic bidder facts were not included in model prompts. No production prompt or
-rule semantic was changed after reading or attempting this blind set, and no blind accuracy is
-claimed until refreshed credentials permit a real run.
+rule semantic was changed after reading or running this blind set.
+
+Blind failures were retained exactly: extraction errors in U1, U2, U4, U6, U7, and U8;
+deterministic final-state mismatches in U1, U2, U4, and U7; and an ambiguity-handling error in U5.
+U3 passed all applicable metrics. U5 produced the correct FEASIBLE state, U6 and U8 safely produced
+UNCERTAIN, and no ground-truth BLOCKED/UNCERTAIN case was incorrectly reported FEASIBLE.
 
 The preserved 28 August baseline remains part of the evidence: requirement interpretation was
 0/7, corrigendum matching 2/2, and ambiguity handling 6/9. Failures were not hidden. They exposed
 generic defects: rule-kind aliases were not canonicalized, a `PROCESSING_WINDOW` incorrectly
 required a deadline in the same clause, multi-obligation passages lacked deterministic field
 projection, and final operational-state adapters were absent. Those defects are now covered by
-local tests, but no improved live score is claimed until fresh temporary credentials are supplied.
+local tests. The new measured results above replace that baseline as the current live evidence.
 
 Separately, the live canonical R17 path passed: Bedrock interpreted the natural-language
 corrigendum as `MODIFIED`, matched R17, returned `minimum_count 3 -> 4`, and the deterministic
@@ -150,7 +156,7 @@ workflow produced `FEASIBLE -> RECOVERABLE` and `8/8 -> 7/8`.
   sandbox role lacked the required `aws-marketplace:ViewSubscriptions` and
   `aws-marketplace:Subscribe` actions needed to enable this third-party model. Nova Lite was
   reachable, but v1 does not support Bedrock's native `outputConfig` field.
-- The selected fallback is `amazon.nova-lite-v1:0` with its schema included in the prompt, followed
+- The selected live model is `amazon.nova-lite-v1:0` with its schema included in the prompt, followed
   by strict Pydantic and exact-source validation. This is a real Bedrock invocation but is not
   described as Bedrock-native constrained decoding.
 - The minimal live requirement smoke test passed as `DOCUMENT / MANDATORY / INTERPRETED` with
@@ -312,8 +318,8 @@ production-code change. The nine known interpretation cases now live under
 `scripts/run-blind-evaluation.ps1` discovers `.json` cases automatically. Expected
 answers and deterministic facts remain evaluator-side and are never included in the model request.
 Reports separate requirement interpretation, corrigendum matching, ambiguity handling, and final
-operational state, and list unsafe-green errors. The first blind run is `NOT_RUN` because its AWS
-session token was invalid; no unseen performance was manufactured.
+operational state, and list unsafe-green errors. The successful live run retained all failures and
+reported zero unsafe-green errors; no score was manufactured.
 
 ## Remaining external blockers and limitations
 
@@ -321,9 +327,9 @@ session token was invalid; no unseen performance was manufactured.
   lacks the Marketplace subscription actions required to enable that model. Nova Lite v1 works
   through prompted JSON plus local validation.
 - No authorized Groq API key/model is configured.
-- The post-hardening Nova Lite regression and eight-case blind evaluations require refreshed
-  temporary credentials. The previous 0/7 known-regression extraction baseline remains the latest
-  measured live score until those reruns occur.
+- Nova Lite exact requirement interpretation remains limited at 4/7 on known regression and 2/8
+  on the frozen blind set. Human review remains mandatory; no prompt tuning was performed against
+  the blind answer key.
 - PDF upload/OCR and multi-user production hardening are intentionally outside the frozen MVP.
 
 ## Final readiness classification
@@ -332,11 +338,11 @@ session token was invalid; no unseen performance was manufactured.
 |---|---|
 | LOCAL ENGINEERING MVP | READY |
 | DETERMINISTIC DEMO | READY |
-| LIVE LLM VALIDATION | BLOCKED — refreshed temporary credentials required for post-hardening run |
+| LIVE LLM VALIDATION | READY — measured with known limitations |
 | HACKATHON DEMO WITHOUT LIVE PROVIDER | READY |
-| FULL INTENDED HACKATHON STACK | BLOCKED |
+| FULL INTENDED HACKATHON STACK | READY — human review required |
 
-The local deterministic demo remains ready. The live R17 story was verified with Nova Lite, but the
-full intended live interpretation layer remains blocked from a readiness claim until the hardened
-interpreter is rerun with fresh temporary credentials. Haiku 4.5 also remains unavailable under the
-sandbox Marketplace/SCP controls.
+The local deterministic demo remains ready. The live R17 story, provider boundary, known regression,
+and frozen blind evaluation were verified with Nova Lite. Exact requirement interpretation is not
+release-quality and remains human-reviewed. Haiku 4.5 native structured output remains unavailable
+under the sandbox Marketplace/SCP controls, but it is not required for the validated Nova Lite path.

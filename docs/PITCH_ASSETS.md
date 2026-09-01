@@ -99,20 +99,22 @@ and source freshness.
 | Deterministic requirement-result accuracy | 9/9 (100%) |
 | Deterministic overall bid-status accuracy | 9/9 (100%) |
 | Unsupported cases | 0 |
-| Live requirement interpretation | Historical baseline: 0/7 exact matches; hardened rerun pending fresh temporary credentials |
+| Live requirement interpretation | 4/7 known regression; 2/8 frozen blind set |
 | Live corrigendum matching | 2/2 on known regression cases |
-| Live ambiguity handling | Historical baseline: 6/9; hardened rerun currently `NOT_RUN` |
+| Live ambiguity handling | 9/9 known regression; 7/8 frozen blind set |
+| Live final operational state | 6/9 known regression; 4/8 frozen blind set |
 | Live canonical R17 transition | PASS with `amazon.nova-lite-v1:0` |
-| Genuinely blind AI performance | Not measured—8 frozen cases are present; first run blocked by an invalid temporary AWS token |
+| Unsafe-green errors | 0 in known regression and frozen blind runs |
 
 These nine cases informed development. The 100% result is a regression claim about deterministic
 rules, not unseen model accuracy.
 
 ## Current limitations
 
-- Live Bedrock results are mixed: Nova Lite passed the R17 and known corrigendum cases but failed
-  all seven exact requirement-extraction expectations. Native structured output with Claude Haiku
-  4.5 is unavailable because the sandbox role lacks required Marketplace subscription actions.
+- Live Bedrock results are mixed: Nova Lite passed the R17 path and both known corrigendum cases,
+  but exact requirement interpretation reached only 4/7 on known regression and 2/8 on the frozen
+  blind set. Native structured output with Claude Haiku 4.5 is unavailable because the sandbox
+  role lacks required Marketplace subscription actions.
 - The canonical data and documents are synthetic.
 - The product accepts extracted page/section text; PDF upload, OCR, and live GeBIZ retrieval are
   not implemented.

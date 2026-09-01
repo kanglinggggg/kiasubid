@@ -245,8 +245,9 @@ included in model inputs. Copy
 `backend/evaluation/cases/blind/CASE_TEMPLATE.json.example` to a `.json` filename to add a case;
 one facts object supports a single rule and an array supports multi-obligation passages. The
 repository currently contains eight teammate-supplied cases that were frozen before their first
-run. Their first run is `NOT_RUN` because the temporary AWS session token is invalid; no unseen
-score is manufactured, and production prompts must not be tuned against their answer key.
+successful model run. Nova Lite scored 2/8 exact requirement interpretations, 7/8 ambiguity
+decisions, and 4/8 final operational states, with zero unsafe-green errors. These results are
+retained without tuning production prompts against the answer key.
 
 The backend suite covers Bedrock- and Groq-shaped provider boundaries, exact source validation,
 prompt-injection defenses, ambiguity, equivalent paraphrases, removal, deadline-only isolation,
@@ -281,11 +282,11 @@ BidOps supports internal preparation and operational verification. It does not c
 - The HTTP interpretation boundary accepts extracted page/section text. PDF upload and OCR are not
   part of this frozen MVP.
 - Live Bedrock validation uses `amazon.nova-lite-v1:0` in `us-east-1`. The canonical R17 change
-  passed. The 28 August known-regression baseline scored 0/7 exact requirement extraction and 6/9
-  ambiguity handling; those failures drove generic schema, vocabulary, multi-obligation, and
-  downstream-adapter hardening. The post-hardening live rerun is currently `NOT_RUN` because the
-  12-hour sandbox token expired, so no improved live score is claimed. Native JSON-schema output
-  with Claude Haiku 4.5 remains unavailable because the sandbox role lacks
+  passed. The post-hardening known regression scored 4/7 exact requirement interpretations, 2/2
+  corrigendum matches, 9/9 ambiguity decisions, and 6/9 final operational states. The frozen
+  eight-case blind set scored 2/8, not applicable, 7/8, and 4/8 respectively, with zero
+  unsafe-green errors. Native JSON-schema output with Claude Haiku 4.5 remains unavailable because
+  the sandbox role lacks
   `aws-marketplace:ViewSubscriptions` and `aws-marketplace:Subscribe`; Nova Lite uses prompted JSON
   plus strict local validation.
 - The nine structured GeBIZ-derived cases are a deterministic regression set that informed
