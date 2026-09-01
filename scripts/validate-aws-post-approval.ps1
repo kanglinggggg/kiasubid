@@ -168,17 +168,27 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "Bedrock smoke or R17 validation failed." }
 
     Write-Host "5/6 Running the known GeBIZ-derived live-model regression..."
+    $liveReportPath = Join-Path $projectRoot "data\evaluation\live_regression_report.json"
     & $pythonPath -m evaluation --partition regression `
-        --output (Join-Path $projectRoot "data\evaluation\live_regression_report.json")
+        --output $liveReportPath
     if ($LASTEXITCODE -ne 0) { throw "Live-model regression failed." }
+    $liveReport = Get-Content -Raw -LiteralPath $liveReportPath | ConvertFrom-Json
+    if (@($liveReport.blockers).Count -gt 0) {
+        throw "Live-model regression was not executed because the provider reported a blocker. Refresh credentials or provider access, then rerun."
+    }
 
     Write-Host "6/6 Checking for teammate-supplied blind cases..."
     $blindDirectory = Join-Path $projectRoot "backend\evaluation\cases\blind"
     $blindCases = @(Get-ChildItem -LiteralPath $blindDirectory -Filter "*.json" -File)
     if ($blindCases.Count -gt 0 -and -not $SkipBlindEvaluation) {
+        $blindReportPath = Join-Path $projectRoot "data\evaluation\blind_report.json"
         & $pythonPath -m evaluation --partition blind `
-            --output (Join-Path $projectRoot "data\evaluation\blind_report.json")
+            --output $blindReportPath
         if ($LASTEXITCODE -ne 0) { throw "Blind live-model evaluation failed." }
+        $blindReport = Get-Content -Raw -LiteralPath $blindReportPath | ConvertFrom-Json
+        if (@($blindReport.blockers).Count -gt 0) {
+            throw "Blind live-model evaluation was not executed because the provider reported a blocker."
+        }
     } elseif ($blindCases.Count -eq 0) {
         Write-Host "No blind cases are present; no unseen performance is claimed."
     } else {

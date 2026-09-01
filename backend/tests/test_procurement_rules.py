@@ -1,3 +1,4 @@
+from datetime import datetime
 from types import SimpleNamespace
 
 import pytest
@@ -92,3 +93,54 @@ def test_missing_generic_fact_state_returns_uncertain_instead_of_guessing():
     result = assess_requirement(None, requirement)
     assert result.status == AssessmentStatus.UNCERTAIN
     assert "no ambient time or missing fact was guessed" in result.reason
+
+
+def test_processing_window_uses_authoritative_deadline_from_facts_when_clause_omits_it():
+    evaluation = RuleEvaluationInput.model_validate(
+        {
+            "rule": {
+                "kind": "PROCESSING_WINDOW",
+                "action": "Obtain drawings clearance",
+                "deadline": None,
+                "minimum_processing_hours": 168,
+                "compulsory": True,
+            },
+            "facts": {
+                "kind": "PROCESSING_WINDOW",
+                "completed": False,
+                "can_complete": True,
+                "governing_deadline": "2026-09-10T09:00:00+08:00",
+                "earliest_start_at": "2026-09-01T09:00:00+08:00",
+                "estimated_duration_hours": 168,
+            },
+        }
+    )
+    result = evaluate_requirement(
+        [evaluation], datetime.fromisoformat("2026-09-01T09:00:00+08:00")
+    )
+    assert result.operational_status == "RECOVERABLE"
+
+
+def test_processing_window_without_any_authoritative_deadline_is_uncertain():
+    evaluation = RuleEvaluationInput.model_validate(
+        {
+            "rule": {
+                "kind": "PROCESSING_WINDOW",
+                "action": "Obtain drawings clearance",
+                "deadline": None,
+                "minimum_processing_hours": 168,
+                "compulsory": True,
+            },
+            "facts": {
+                "kind": "PROCESSING_WINDOW",
+                "completed": False,
+                "can_complete": True,
+                "earliest_start_at": "2026-09-01T09:00:00+08:00",
+                "estimated_duration_hours": 168,
+            },
+        }
+    )
+    result = evaluate_requirement(
+        [evaluation], datetime.fromisoformat("2026-09-01T09:00:00+08:00")
+    )
+    assert result.operational_status == "UNCERTAIN"

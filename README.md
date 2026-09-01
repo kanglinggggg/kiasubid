@@ -241,7 +241,10 @@ powershell -ExecutionPolicy Bypass -File .\scripts\run-blind-evaluation.ps1
 The blind report separates requirement interpretation, corrigendum matching, ambiguity handling,
 and final operational-state accuracy, and flags unsafe-green errors where a ground-truth
 `BLOCKED`/`UNCERTAIN` case became `FEASIBLE`. Expected answers and deterministic facts are never
-included in model inputs. No blind cases ship in the baseline, so no unseen score is manufactured.
+included in model inputs. Copy
+`backend/evaluation/cases/blind/CASE_TEMPLATE.json.example` to a `.json` filename to add a case;
+one facts object supports a single rule and an array supports multi-obligation passages. No blind
+cases ship in the baseline, so no unseen score is manufactured.
 
 The backend suite covers Bedrock- and Groq-shaped provider boundaries, exact source validation,
 prompt-injection defenses, ambiguity, equivalent paraphrases, removal, deadline-only isolation,
@@ -275,11 +278,14 @@ BidOps supports internal preparation and operational verification. It does not c
   GeBIZ connection or automatic submission path.
 - The HTTP interpretation boundary accepts extracted page/section text. PDF upload and OCR are not
   part of this frozen MVP.
-- Live Bedrock validation uses `amazon.nova-lite-v1:0` in `us-east-1`. The canonical R17 change and
-  both known corrigendum cases passed, but exact requirement extraction scored 0/7 and ambiguity
-  handling 6/9 on the known regression set. Native JSON-schema output with Claude Haiku 4.5 remains
-  unavailable because the sandbox role lacks `aws-marketplace:ViewSubscriptions` and
-  `aws-marketplace:Subscribe`; Nova Lite uses prompted JSON plus strict local validation.
+- Live Bedrock validation uses `amazon.nova-lite-v1:0` in `us-east-1`. The canonical R17 change
+  passed. The 28 August known-regression baseline scored 0/7 exact requirement extraction and 6/9
+  ambiguity handling; those failures drove generic schema, vocabulary, multi-obligation, and
+  downstream-adapter hardening. The post-hardening live rerun is currently `NOT_RUN` because the
+  12-hour sandbox token expired, so no improved live score is claimed. Native JSON-schema output
+  with Claude Haiku 4.5 remains unavailable because the sandbox role lacks
+  `aws-marketplace:ViewSubscriptions` and `aws-marketplace:Subscribe`; Nova Lite uses prompted JSON
+  plus strict local validation.
 - The nine structured GeBIZ-derived cases are a deterministic regression set that informed
   development, not an unseen-AI accuracy claim.
 - SQLite is appropriate for the local single-user demonstration, not a multi-user production

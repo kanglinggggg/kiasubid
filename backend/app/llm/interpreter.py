@@ -1,4 +1,5 @@
 import json
+import re
 from collections.abc import Callable
 from typing import Any, TypeVar
 
@@ -23,12 +24,38 @@ from app.llm.schemas import (
     RequirementInterpretationRequest,
     RequirementInterpretationResult,
     RequirementSource,
+    StructuredField,
+    StructuredRequirement,
+)
+from app.rules.schemas import (
+    EventAttendanceRule,
+    ParticipationRestrictionRule,
+    ProcessingWindowRule,
+    QualificationRule,
+    RequiredDocumentRule,
+    SourceFreshnessRule,
 )
 
 OutputModel = TypeVar("OutputModel", bound=BaseModel)
+PayloadNormalizer = Callable[[dict[str, Any]], dict[str, Any]]
+
+_RULE_REQUIREMENT_TYPE = {
+    "EVENT_ATTENDANCE": "ELIGIBILITY",
+    "QUALIFICATION": "COMPLIANCE",
+    "REQUIRED_DOCUMENT": "DOCUMENT",
+    "PROCESSING_WINDOW": "DOCUMENT",
+    "PARTICIPATION_RESTRICTION": "ELIGIBILITY",
+    "SOURCE_FRESHNESS": "DOCUMENT",
+}
 
 
 class InterpretationFailure(ValueError):
+    pass
+
+
+class InterpretationUnavailable(InterpretationFailure):
+    """The selected live provider could not execute, so no accuracy claim is valid."""
+
     pass
 
 
@@ -60,6 +87,133 @@ def _scalar(value: Any) -> Any:
     return value
 
 
+def _normalize_requirement_json(payload: dict[str, Any]) -> dict[str, Any]:
+    """Repair provider vocabulary aliases without inventing procurement facts."""
+    requirements = payload.get("requirements")
+    if not isinstance(requirements, list):
+        return payload
+    for requirement in requirements:
+        if not isinstance(requirement, dict):
+            continue
+        rule = requirement.get("procurement_rule")
+        kind = rule.get("kind") if isinstance(rule, dict) else None
+        if isinstance(kind, str):
+            kind = kind.upper()
+            rule["kind"] = kind
+        requirement_type = requirement.get("requirement_type")
+        if isinstance(requirement_type, str):
+            requirement_type = requirement_type.upper()
+            requirement["requirement_type"] = _RULE_REQUIREMENT_TYPE.get(
+                requirement_type, requirement_type
+            )
+        gate_type = requirement.get("gate_type")
+        if isinstance(gate_type, str):
+            aliases = {
+                "CRITICAL": "MANDATORY",
+                "REQUIRED": "MANDATORY",
+                "OPTIONAL": "INFORMATIONAL",
+                "INFO": "INFORMATIONAL",
+            }
+            gate_type = gate_type.upper()
+            requirement["gate_type"] = aliases.get(gate_type, gate_type)
+        fields = requirement.get("structured_fields")
+        if isinstance(fields, dict):
+            requirement["structured_fields"] = [
+                {"name": str(name), "value": value} for name, value in fields.items()
+            ]
+    return payload
+
+
+def _field_name_for_document(document: str) -> str:
+    tokens = re.findall(r"[a-z0-9]+", document.casefold())
+    if "attachment" in tokens and "envelope" in tokens:
+        tokens.remove("envelope")
+    stem = ("_".join(tokens[:8]) or "document")[:90].rstrip("_")
+    return f"{stem}_required"
+
+
+def _canonicalize_requirement(
+    payload: RequirementInterpretationRequest,
+    requirement: StructuredRequirement,
+    *,
+    stable_key: str | None,
+) -> StructuredRequirement:
+    """Project typed rule data into stable, deterministic requirement fields."""
+    rule = requirement.procurement_rule
+    requirement_type = requirement.requirement_type
+    gate_type = requirement.gate_type
+    compulsory = requirement.compulsory
+    interpretation_status = requirement.interpretation_status
+    uncertainty_reason = requirement.uncertainty_reason
+    fields = {item.name: item.value for item in requirement.structured_fields}
+
+    if rule is not None:
+        requirement_type = _RULE_REQUIREMENT_TYPE[str(rule.kind)]
+        rule_compulsory = getattr(rule, "compulsory", None)
+        if hasattr(rule, "compulsory"):
+            compulsory = rule_compulsory
+            fields["compulsory"] = rule_compulsory
+            gate_type = "MANDATORY" if rule_compulsory is True else "INFORMATIONAL"
+            if rule_compulsory is None:
+                interpretation_status = "UNCERTAIN"
+                uncertainty_reason = uncertainty_reason or (
+                    "The authoritative source does not establish whether this obligation is "
+                    "compulsory."
+                )
+
+        if isinstance(rule, EventAttendanceRule):
+            fields["attendance_required"] = rule.compulsory is True
+        elif isinstance(rule, QualificationRule):
+            if len(rule.options) == 1:
+                option = rule.options[0]
+                fields["registration_code"] = option.code
+                if option.minimum_grade is not None:
+                    fields["minimum_financial_grade"] = option.minimum_grade
+            else:
+                fields["alternative_registration_allowed"] = rule.match == "ANY"
+        elif isinstance(rule, RequiredDocumentRule):
+            for document in rule.documents:
+                fields[_field_name_for_document(document)] = True
+        elif isinstance(rule, ProcessingWindowRule):
+            fields["minimum_processing_hours"] = rule.minimum_processing_hours
+            weeks = rule.minimum_processing_hours / 168
+            if weeks.is_integer() and weeks > 0:
+                fields["minimum_processing_weeks"] = int(weeks)
+        elif isinstance(rule, ParticipationRestrictionRule):
+            match = re.search(
+                r"\b(?:under|reference(?:d)?(?:\s+as)?|exercise)\s+"
+                r"([A-Za-z][A-Za-z0-9./-]*\d[A-Za-z0-9./-]*)\b",
+                rule.restriction,
+                flags=re.IGNORECASE,
+            )
+            if match:
+                fields.setdefault("shortlist_reference", match.group(1))
+        elif isinstance(rule, SourceFreshnessRule):
+            fields["latest_version_required"] = rule.latest_version_required
+
+    snippet = requirement.source.snippet
+    source = RequirementSource(
+        document=payload.document_name,
+        page=payload.page,
+        section=payload.section,
+        snippet=snippet,
+    )
+    return requirement.model_copy(
+        update={
+            "stable_key": stable_key,
+            "requirement_type": requirement_type,
+            "gate_type": gate_type,
+            "compulsory": compulsory,
+            "structured_fields": [
+                StructuredField(name=name, value=value) for name, value in sorted(fields.items())
+            ],
+            "interpretation_status": interpretation_status,
+            "uncertainty_reason": uncertainty_reason,
+            "source": source,
+        }
+    )
+
+
 class TenderInterpreter:
     def __init__(
         self,
@@ -82,6 +236,7 @@ class TenderInterpreter:
         schema_name: str,
         output_model: type[OutputModel],
         validator: Callable[[OutputModel], None] | None = None,
+        normalizer: PayloadNormalizer | None = None,
     ) -> tuple[OutputModel, int, str, str]:
         client = self._configured_client()
         current_prompt = prompt
@@ -96,7 +251,10 @@ class TenderInterpreter:
                 schema_name=schema_name,
             )
             try:
-                result = output_model.model_validate(_json_object(last_output))
+                raw_payload = _json_object(last_output)
+                if normalizer is not None:
+                    raw_payload = normalizer(raw_payload)
+                result = output_model.model_validate(raw_payload)
                 if validator is not None:
                     validator(result)
                 return result, attempt, client.model_id, getattr(client, "mode", "BEDROCK")
@@ -126,25 +284,27 @@ class TenderInterpreter:
                 schema=requirement_schema(),
                 schema_name="tender_requirements",
                 output_model=RequirementInterpretationResult,
+                normalizer=_normalize_requirement_json,
                 validator=lambda result: self._validate_requirements_against_input(
                     payload, result
                 ),
             )
-            source_text = payload.text
             normalized = []
-            for requirement in result.requirements:
-                snippet = requirement.source.snippet
-                if not snippet or snippet not in source_text:
-                    snippet = source_text
-                source = RequirementSource(
-                    document=payload.document_name,
-                    page=payload.page,
-                    section=payload.section,
-                    snippet=snippet,
-                )
-                stable_key = requirement.stable_key or payload.stable_key_hint
+            used_keys: set[str] = set()
+            for index, requirement in enumerate(result.requirements):
+                candidate_key = requirement.stable_key
+                if payload.stable_key_hint and index == 0:
+                    candidate_key = payload.stable_key_hint
+                elif payload.stable_key_hint and (
+                    not candidate_key or candidate_key in used_keys
+                ):
+                    candidate_key = f"{payload.stable_key_hint}.{index + 1}"
+                if candidate_key:
+                    used_keys.add(candidate_key)
                 normalized.append(
-                    requirement.model_copy(update={"source": source, "stable_key": stable_key})
+                    _canonicalize_requirement(
+                        payload, requirement, stable_key=candidate_key
+                    )
                 )
             return RequirementInterpretationEnvelope(
                 mode=mode,
@@ -152,16 +312,23 @@ class TenderInterpreter:
                 attempts=attempts,
                 result=RequirementInterpretationResult(requirements=normalized),
             )
-        except (ModelUnavailable, InterpretationFailure) as exc:
+        except ModelUnavailable as exc:
+            if not allow_fallback:
+                raise InterpretationUnavailable(str(exc)) from exc
+            return RequirementInterpretationEnvelope(
+                mode="DEMO_FALLBACK",
+                fallback_reason=str(exc),
+                attempts=0,
+                result=interpret_requirement_fallback(payload),
+            )
+        except InterpretationFailure as exc:
             if not allow_fallback:
                 raise InterpretationFailure(str(exc)) from exc
             return RequirementInterpretationEnvelope(
                 mode="DEMO_FALLBACK",
                 fallback_reason=str(exc),
                 attempts=(
-                    0
-                    if isinstance(exc, ModelUnavailable)
-                    else self._settings.llm_max_retries + 1
+                    self._settings.llm_max_retries + 1
                 ),
                 result=interpret_requirement_fallback(payload),
             )
@@ -211,16 +378,23 @@ class TenderInterpreter:
                 attempts=attempts,
                 result=result,
             )
-        except (ModelUnavailable, InterpretationFailure, ValueError) as exc:
+        except ModelUnavailable as exc:
+            if not allow_fallback:
+                raise InterpretationUnavailable(str(exc)) from exc
+            return ChangeInterpretationEnvelope(
+                mode="DEMO_FALLBACK",
+                fallback_reason=str(exc),
+                attempts=0,
+                result=interpret_change_fallback(payload),
+            )
+        except (InterpretationFailure, ValueError) as exc:
             if not allow_fallback:
                 raise InterpretationFailure(str(exc)) from exc
             return ChangeInterpretationEnvelope(
                 mode="DEMO_FALLBACK",
                 fallback_reason=str(exc),
                 attempts=(
-                    0
-                    if isinstance(exc, ModelUnavailable)
-                    else self._settings.llm_max_retries + 1
+                    self._settings.llm_max_retries + 1
                 ),
                 result=interpret_change_fallback(payload),
             )

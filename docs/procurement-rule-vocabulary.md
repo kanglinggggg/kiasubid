@@ -49,18 +49,21 @@ be ready or explicitly completable before closing.
 
 ### `PROCESSING_WINDOW`
 
-The rule contains the mandatory action, governing deadline, and minimum processing duration. Facts
-contain completion state, earliest possible start, estimated duration, and whether completion is
-possible. For an incomplete action, projected completion is:
+The rule contains the mandatory action and minimum processing duration. The governing deadline is
+optional because a clause may state a four-week processing period without repeating the tender
+closing date. An authoritative deadline can instead arrive through deterministic tender metadata
+in the facts. Facts also contain completion state, earliest possible start, estimated duration, and
+whether completion is possible. For an incomplete action, projected completion is:
 
 ```text
 max(evaluation_as_of, earliest_start_at)
 + max(minimum_processing_hours, estimated_duration_hours)
 ```
 
-The result is `UNMET`; it is recoverable only when projected completion is on or before the rule's
-deadline. This rule is neutral to the nature of the action (for example clearance, approval, or
-payment) and therefore needs no tender-specific branch.
+The result is `UNMET`; it is recoverable only when projected completion is on or before the
+authoritative deadline from either source. If neither source contains a deadline, the result is
+`UNCERTAIN` rather than an invented date. This rule is neutral to the nature of the action (for
+example clearance, approval, or payment) and therefore needs no tender-specific branch.
 
 ### `PARTICIPATION_RESTRICTION`
 

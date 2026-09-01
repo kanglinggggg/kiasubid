@@ -17,6 +17,27 @@
     },
     "change_input": null,
     "deterministic_scenario": null,
+    "deterministic_facts": [
+      {
+        "kind": "QUALIFICATION",
+        "evidence": [{"code": "CR11", "grade": "L3", "verified": true, "meets_minimum": true}],
+        "can_obtain_before_deadline": false
+      },
+      {
+        "kind": "EVENT_ATTENDANCE",
+        "attended": true,
+        "attendance_opportunity_open": false,
+        "makeup_available": false
+      },
+      {
+        "kind": "REQUIRED_DOCUMENT",
+        "documents": [
+          {"name": "Price attachment", "state": "SUBMITTED"},
+          {"name": "Technical attachment", "state": "SUBMITTED"}
+        ],
+        "submission_open": true
+      }
+    ],
     "expected": {
       "requirement_type": "COMPLIANCE",
       "gate_type": "MANDATORY",
@@ -45,6 +66,12 @@
     },
     "change_input": null,
     "deterministic_scenario": null,
+    "deterministic_facts": {
+      "kind": "EVENT_ATTENDANCE",
+      "attended": false,
+      "attendance_opportunity_open": false,
+      "makeup_available": false
+    },
     "expected": {
       "requirement_type": "ELIGIBILITY",
       "gate_type": "MANDATORY",
@@ -73,6 +100,14 @@
     },
     "change_input": null,
     "deterministic_scenario": null,
+    "deterministic_facts": {
+      "kind": "PROCESSING_WINDOW",
+      "completed": false,
+      "can_complete": true,
+      "governing_deadline": "2026-07-31T16:00:00+08:00",
+      "earliest_start_at": "2026-07-01T16:00:00+08:00",
+      "estimated_duration_hours": 672
+    },
     "expected": {
       "requirement_type": "DOCUMENT",
       "gate_type": "MANDATORY",
@@ -101,6 +136,14 @@
     },
     "change_input": null,
     "deterministic_scenario": null,
+    "deterministic_facts": {
+      "kind": "QUALIFICATION",
+      "evidence": [
+        {"code": "CW01", "grade": null, "verified": true, "meets_minimum": false},
+        {"code": "ME15", "grade": null, "verified": true, "meets_minimum": false}
+      ],
+      "can_obtain_before_deadline": false
+    },
     "expected": {
       "requirement_type": "COMPLIANCE",
       "gate_type": "MANDATORY",
@@ -129,6 +172,14 @@
     },
     "change_input": null,
     "deterministic_scenario": null,
+    "deterministic_facts": {
+      "kind": "REQUIRED_DOCUMENT",
+      "documents": [
+        {"name": "Price attachment", "state": "READY", "can_complete_before_deadline": true},
+        {"name": "Technical attachment", "state": "SUBMITTED"}
+      ],
+      "submission_open": true
+    },
     "expected": {
       "requirement_type": "DOCUMENT",
       "gate_type": "MANDATORY",
@@ -157,6 +208,11 @@
     },
     "change_input": null,
     "deterministic_scenario": null,
+    "deterministic_facts": {
+      "kind": "PARTICIPATION_RESTRICTION",
+      "eligible": false,
+      "can_become_eligible_before_deadline": false
+    },
     "expected": {
       "requirement_type": "ELIGIBILITY",
       "gate_type": "MANDATORY",
@@ -185,6 +241,13 @@
     },
     "change_input": null,
     "deterministic_scenario": null,
+    "deterministic_facts": {
+      "kind": "QUALIFICATION",
+      "evidence": [
+        {"code": "EPU/FBV/10", "grade": null, "verified": true, "meets_minimum": false}
+      ],
+      "can_obtain_before_deadline": null
+    },
     "expected": {
       "requirement_type": "COMPLIANCE",
       "gate_type": "INFORMATIONAL",
@@ -230,6 +293,12 @@
       "text": ""
     },
     "deterministic_scenario": null,
+    "deterministic_facts": {
+      "kind": "SOURCE_FRESHNESS",
+      "latest_version_ingested": false,
+      "change_notice_present": true,
+      "change_content_available": false
+    },
     "expected": {
       "requirement_type": "DOCUMENT",
       "gate_type": "MANDATORY",
@@ -278,6 +347,14 @@
       "text": "The tender deposit of $500 must be paid latest by 5 May 2026, 5.00pm."
     },
     "deterministic_scenario": null,
+    "deterministic_facts": {
+      "kind": "PROCESSING_WINDOW",
+      "completed": false,
+      "can_complete": true,
+      "governing_deadline": "2026-05-05T17:00:00+08:00",
+      "earliest_start_at": "2026-04-30T09:00:00+08:00",
+      "estimated_duration_hours": 0
+    },
     "expected": {
       "requirement_type": "DEADLINE",
       "gate_type": "MANDATORY",

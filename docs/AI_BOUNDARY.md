@@ -13,6 +13,13 @@ Source document, page, and section come from the trusted request envelope. A mod
 non-contiguous or fabricated source snippet fails validation and is retried; it is not silently
 accepted.
 
+After validation, deterministic canonicalization maps the six typed procurement-rule kinds to the
+bounded requirement/gate vocabulary, projects explicitly represented rule fields into stable
+structured fields, and assigns unique stable-key suffixes to multiple obligations from one passage.
+It may normalize vocabulary aliases such as `QUALIFICATION` to `COMPLIANCE`, but it cannot add a
+missing qualification, count, deadline, or criticality. A processing duration without an
+authoritative deadline remains deadline-null; bidder/tender metadata may supply the deadline later.
+
 Tender and corrigendum contents are explicitly treated as untrusted data. Document-embedded text
 that asks a model to ignore validation, reveal prompts, call tools, or choose an operational result
 has no authority. The clients expose no tools, and adversarial development fixtures exercise this
@@ -58,11 +65,12 @@ commercial decision.
 ## Evaluation boundary
 
 The evaluation-only harness under `backend/evaluation/` keeps synthetic development fixtures, the
-nine known GeBIZ-derived regression cases, and an intentionally empty genuinely blind partition
+  nine known GeBIZ-derived regression cases, and a genuinely blind partition with no scored cases
 separate. It invokes interpretation with fallback disabled and scores requirement extraction,
 corrigendum matching, and ambiguity handling. Final operational state is scored only when a frozen
-downstream adapter or deterministic facts exist; other cases are `NOT_RUN`, not fabricated
-failures or passes. Unsafe-green errors are reported when ground truth is `BLOCKED` or `UNCERTAIN`
+  downstream adapter or deterministic facts exist; multi-obligation cases can supply one fact set
+  per typed rule. Missing rule/fact bindings fail closed to `UNCERTAIN`; cases with no adapter are
+  `NOT_RUN`, not fabricated failures or passes. Unsafe-green errors are reported when ground truth is `BLOCKED` or `UNCERTAIN`
 but deterministic output becomes `FEASIBLE`. Expected answers and deterministic facts are never
 sent to the model. The separate generic-rule benchmark scores deterministic requirement results
 and final bid states. Missing source content is handled by a deterministic safety guard because

@@ -10,9 +10,13 @@ from app.config import Settings, settings
 from app.database import Base
 from app.demo.seed import DEMO_BID_ID, seed_demo
 from app.graph.workflow import build_corrigendum_graph
-from app.llm.interpreter import InterpretationFailure, TenderInterpreter
+from app.llm.interpreter import (
+    InterpretationFailure,
+    InterpretationUnavailable,
+    TenderInterpreter,
+)
 from app.llm.schemas import ChangeInterpretationEnvelope, StructuredRequirement
-from app.rules import RuleEvaluationInput, evaluate_requirement
+from app.rules import ProcurementRuleFacts, RuleEvaluationInput, evaluate_requirement
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -58,6 +62,63 @@ def _actual_fields(requirement: StructuredRequirement) -> dict[str, Any]:
 
 def _expected_fields_match(expected: dict[str, Any], actual: dict[str, Any]) -> bool:
     return all(actual.get(key) == value for key, value in expected.items())
+
+
+def _requirement_match_score(
+    case: EvaluationCase, requirement: StructuredRequirement
+) -> tuple[int, int, int]:
+    """Choose the scored obligation without exposing ground truth to the model prompt."""
+    actual_fields = _actual_fields(requirement)
+    field_matches = sum(
+        actual_fields.get(key) == value
+        for key, value in case.expected.structured_fields.items()
+    )
+    return (
+        int(requirement.requirement_type == case.expected.requirement_type),
+        int(requirement.gate_type == case.expected.gate_type),
+        field_matches,
+    )
+
+
+def _fact_sets(case: EvaluationCase) -> list[ProcurementRuleFacts]:
+    facts = case.deterministic_facts
+    if facts is None:
+        return []
+    return facts if isinstance(facts, list) else [facts]
+
+
+def _evaluate_interpreted_rules(
+    case: EvaluationCase, requirements: list[StructuredRequirement]
+) -> str:
+    """Bind LLM-produced rules to human/registry facts, then run deterministic evaluators."""
+    available_facts = list(_fact_sets(case))
+    evaluations: list[RuleEvaluationInput] = []
+    unmatched_rule = False
+    for requirement in requirements:
+        rule = requirement.procurement_rule
+        if rule is None:
+            unmatched_rule = True
+            continue
+        matching_index = next(
+            (
+                index
+                for index, facts in enumerate(available_facts)
+                if str(facts.kind) == str(rule.kind)
+            ),
+            None,
+        )
+        if matching_index is None:
+            unmatched_rule = True
+            continue
+        facts = available_facts.pop(matching_index)
+        evaluations.append(RuleEvaluationInput(rule=rule, facts=facts))
+
+    evaluations.extend(case.companion_rules)
+    if not evaluations or unmatched_rule or available_facts:
+        # Missing either a typed rule or authoritative bidder facts cannot safely
+        # become a green operational result.
+        return "UNCERTAIN"
+    return evaluate_requirement(evaluations, case.evaluation_as_of).operational_status.value
 
 
 def _source_matches_requirement(case: EvaluationCase, requirement: StructuredRequirement) -> bool:
@@ -158,7 +219,15 @@ class EvaluationRunner:
                 f"Live {self.settings.llm_provider.title()} evaluation was not run: the selected "
                 "provider's model and credential configuration are unavailable."
             )
-        results = [self._run_case(case, bool(blockers)) for case in cases]
+        results: list[CaseResult] = []
+        provider_blocked = bool(blockers)
+        for case in cases:
+            result = self._run_case(case, provider_blocked)
+            results.append(result)
+            if result.blocker:
+                if result.blocker not in blockers:
+                    blockers.append(result.blocker)
+                provider_blocked = True
         failures = [
             {"case_id": result.id, **failure.model_dump()}
             for result in results
@@ -211,12 +280,13 @@ class EvaluationRunner:
                 final_operational_state="NOT_RUN",
                 actual_operational_state=None,
                 unsafe_green_error=False,
+                blocker=None,
                 failures=[],
             )
 
         failures: list[CaseFailure] = []
         actual_state: str | None = None
-        interpreted_requirement: StructuredRequirement | None = None
+        interpreted_requirements: list[StructuredRequirement] = []
         try:
             if case.kind == "REQUIREMENT":
                 envelope = self.interpreter.interpret_requirements(
@@ -233,10 +303,14 @@ class EvaluationRunner:
                     )
                 requirements = envelope.result.requirements
                 hint = case.requirement_input.stable_key_hint
-                requirement = next(
-                    (item for item in requirements if hint and item.stable_key == hint),
-                    requirements[0] if requirements else None,
+                hinted = [item for item in requirements if hint and item.stable_key == hint]
+                candidates = hinted or requirements
+                requirement = (
+                    max(candidates, key=lambda item: _requirement_match_score(case, item))
+                    if candidates
+                    else None
                 )
+                interpreted_requirements = requirements
                 if requirement is None:
                     requirement_status = "FAIL"
                     failures.append(
@@ -248,7 +322,6 @@ class EvaluationRunner:
                     )
                     actual_ambiguity = None
                 else:
-                    interpreted_requirement = requirement
                     extraction_ok = (
                         requirement.requirement_type == case.expected.requirement_type
                         and requirement.gate_type == case.expected.gate_type
@@ -318,7 +391,9 @@ class EvaluationRunner:
                 actual_ambiguity = result.interpretation_status
                 mode = "DETERMINISTIC_SAFETY_GUARD" if missing_source else envelope.mode
                 downstream_envelope = envelope
-                interpreted_requirement = result.resulting_requirement
+                interpreted_requirements = (
+                    [result.resulting_requirement] if result.resulting_requirement else []
+                )
 
             ambiguity_status = (
                 "PASS" if actual_ambiguity == case.expected.ambiguity_state else "FAIL"
@@ -351,23 +426,20 @@ class EvaluationRunner:
                             detail=f"Production workflow failed: {exc}",
                         )
                     )
-            elif case.deterministic_facts is not None and interpreted_requirement is not None:
-                if interpreted_requirement.procurement_rule is None:
-                    final_status = "NOT_RUN"
-                else:
-                    evaluation = RuleEvaluationInput(
-                        rule=interpreted_requirement.procurement_rule,
-                        facts=case.deterministic_facts,
-                    )
-                    deterministic = evaluate_requirement(
-                        [evaluation, *case.companion_rules], case.evaluation_as_of
-                    )
-                    actual_state = deterministic.operational_status.value
-                    final_status = (
-                        "PASS"
-                        if actual_state == case.expected.final_operational_state
-                        else "FAIL"
-                    )
+            elif missing_source:
+                actual_state = "UNCERTAIN"
+                final_status = (
+                    "PASS"
+                    if actual_state == case.expected.final_operational_state
+                    else "FAIL"
+                )
+            elif case.deterministic_facts is not None:
+                actual_state = _evaluate_interpreted_rules(case, interpreted_requirements)
+                final_status = (
+                    "PASS"
+                    if actual_state == case.expected.final_operational_state
+                    else "FAIL"
+                )
             else:
                 final_status = "NOT_RUN"
             if final_status == "FAIL" and actual_state is not None:
@@ -399,7 +471,26 @@ class EvaluationRunner:
                 final_operational_state=final_status,
                 actual_operational_state=actual_state,
                 unsafe_green_error=unsafe_green,
+                blocker=None,
                 failures=failures,
+            )
+        except InterpretationUnavailable as exc:
+            return CaseResult(
+                id=case.id,
+                partition=case.partition,
+                interpretation_mode="NOT_RUN",
+                requirement_interpretation=(
+                    "NOT_RUN" if case.kind == "REQUIREMENT" else "NOT_APPLICABLE"
+                ),
+                corrigendum_matching=(
+                    "NOT_RUN" if case.kind == "CORRIGENDUM" else "NOT_APPLICABLE"
+                ),
+                ambiguity_handling="NOT_RUN",
+                final_operational_state="NOT_RUN",
+                actual_operational_state=None,
+                unsafe_green_error=False,
+                blocker=f"Live {self.settings.llm_provider.title()} evaluation was not run: {exc}",
+                failures=[],
             )
         except InterpretationFailure as exc:
             applicable = "requirement interpretation" if case.kind == "REQUIREMENT" else "corrigendum matching"
@@ -428,6 +519,7 @@ class EvaluationRunner:
                 final_operational_state="NOT_RUN",
                 actual_operational_state=None,
                 unsafe_green_error=False,
+                blocker=None,
                 failures=failures,
             )
 

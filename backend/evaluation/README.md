@@ -7,7 +7,9 @@ Datasets are deliberately separated:
 
 - `cases/development/` contains synthetic fixtures used while building the interpreter, including the hero handoff and semantic-isolation checks.
 - `cases/regression/` contains the nine GeBIZ-derived cases that informed development. They are regression data, not unseen-AI evidence.
-- `cases/blind/` is reserved for genuinely unseen, teammate-authored cases. It is intentionally empty in the frozen baseline. Production prompts must not be edited to fit answers placed here.
+- `cases/blind/` is reserved for genuinely unseen, teammate-authored `.json` cases. It ships with
+  documentation and a non-loaded `.json.example` template but no scored blind case. Production
+  prompts must not be edited to fit answers placed here.
 
 Every JSON record declares expected requirement type, gate type, structured fields, ambiguity state, affected requirement, change type, and final operational state. The runner reports four separate metrics and classifies every observed failure as one of the required categories.
 
@@ -31,15 +33,17 @@ powershell -ExecutionPolicy Bypass -File .\scripts\run-blind-evaluation.ps1
 ```
 
 The model receives only `requirement_input` or `change_input`. Expected answers and deterministic
-facts remain evaluator-side. A generic interpreted `procurement_rule` can be evaluated with the
-case's `deterministic_facts`; the known R17 flow uses its existing production-workflow adapter.
-Cases without a downstream adapter report final operational state as `NOT_RUN` rather than being
-assigned a fabricated result.
+facts remain evaluator-side. Generic interpreted `procurement_rule` objects are bound to the
+case's authoritative bidder facts by rule kind and then passed through the production deterministic
+evaluators. One facts object covers a single rule; an array supports multi-obligation passages. A
+missing rule/fact binding fails closed to `UNCERTAIN`; it can never become an unsafe green result.
+The known R17 flow uses its existing production-workflow adapter.
 
 Live evaluation never enables fallback. If the selected provider's model or credentials are absent,
 the report records a blocker and leaves accuracy values unmeasured instead of inventing scores.
-External cases without a frozen downstream scenario adapter report final operational state as
-`NOT_RUN`; those same states are evaluated through the separate deterministic rule benchmark.
+External cases without deterministic facts or a frozen downstream scenario adapter report final
+operational state as `NOT_RUN`; those same states may be evaluated through the separate
+deterministic rule benchmark.
 Every report also lists unsafe-green errors: a ground-truth `BLOCKED` or `UNCERTAIN` case whose
 deterministic final result was incorrectly `FEASIBLE`.
 

@@ -99,11 +99,11 @@ and source freshness.
 | Deterministic requirement-result accuracy | 9/9 (100%) |
 | Deterministic overall bid-status accuracy | 9/9 (100%) |
 | Unsupported cases | 0 |
-| Live requirement interpretation | 0/7 exact matches on known regression cases |
+| Live requirement interpretation | Historical baseline: 0/7 exact matches; hardened rerun pending fresh temporary credentials |
 | Live corrigendum matching | 2/2 on known regression cases |
-| Live ambiguity handling | 6/9 on known regression cases |
+| Live ambiguity handling | Historical baseline: 6/9; hardened rerun currently `NOT_RUN` |
 | Live canonical R17 transition | PASS with `amazon.nova-lite-v1:0` |
-| Genuinely blind AI performance | Not claimed—blind folder intentionally empty |
+| Genuinely blind AI performance | Not claimed—template provided, no scored blind case ships |
 
 These nine cases informed development. The 100% result is a regression claim about deterministic
 rules, not unseen model accuracy.

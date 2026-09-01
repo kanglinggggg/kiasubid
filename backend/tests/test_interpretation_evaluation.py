@@ -1,7 +1,9 @@
 import json
+from pathlib import Path
 
 from app.config import Settings
 from app.llm.interpreter import TenderInterpreter
+from app.llm.provider import BedrockUnavailable
 from app.llm.schemas import RequirementInterpretationRequest, RequirementSource
 from evaluation.runner import EvaluationRunner, load_cases
 from evaluation.schema import EvaluationCase
@@ -12,9 +14,19 @@ class FakeBedrockClient:
 
     def __init__(self, payload: dict):
         self.payload = payload
+        self.last_call: dict[str, object] = {}
+
+    def generate_json(self, **kwargs: object) -> str:
+        self.last_call = kwargs
+        return json.dumps(self.payload)
+
+
+class UnavailableBedrockClient:
+    model_id = "test.bedrock-model"
+    mode = "BEDROCK"
 
     def generate_json(self, **_: object) -> str:
-        return json.dumps(self.payload)
+        raise BedrockUnavailable("temporary credentials expired")
 
 
 def test_regression_development_and_blind_benchmarks_are_separate_and_validated():
@@ -36,6 +48,10 @@ def test_regression_development_and_blind_benchmarks_are_separate_and_validated(
             "BLOCKED",
             "UNCERTAIN",
         }
+    template = Path(
+        "backend/evaluation/cases/blind/CASE_TEMPLATE.json.example"
+    )
+    EvaluationCase.model_validate(json.loads(template.read_text(encoding="utf-8")))
 
 
 def test_live_evaluation_reports_configuration_blocker_without_fallback_scores():
@@ -53,6 +69,21 @@ def test_live_evaluation_reports_configuration_blocker_without_fallback_scores()
     assert all(case.interpretation_mode == "NOT_RUN" for case in report.cases)
     assert all(not case.failures for case in report.cases)
     assert report.unsafe_green_errors == []
+
+
+def test_runtime_provider_failure_is_not_misreported_as_model_inaccuracy():
+    app_settings = Settings(bedrock_model_id="test.bedrock-model")
+    interpreter = TenderInterpreter(UnavailableBedrockClient(), app_settings)
+    report = EvaluationRunner(interpreter, app_settings).run(
+        load_cases("regression"), "regression"
+    )
+    assert report.blockers
+    assert "temporary credentials expired" in report.blockers[0]
+    assert report.requirement_interpretation_accuracy.accuracy_percent is None
+    assert report.corrigendum_matching_accuracy.accuracy_percent is None
+    assert report.ambiguity_handling_accuracy.accuracy_percent is None
+    assert report.final_operational_state_accuracy.accuracy_percent is None
+    assert report.failures == []
 
 
 def test_missing_tender_text_returns_uncertain_without_model_invention():
@@ -117,6 +148,194 @@ def test_evaluator_separates_live_interpretation_from_hero_downstream_result():
     assert report.final_operational_state_accuracy.accuracy_percent == 100
     assert report.cases[0].actual_operational_state == "RECOVERABLE"
     assert report.cases[0].failures == []
+
+
+def _typed_requirement_record(
+    case: EvaluationCase,
+    *,
+    text: str,
+    requirement_type: str,
+    gate_type: str,
+    rule: dict,
+    status: str = "INTERPRETED",
+) -> dict:
+    return {
+        "stable_key": None,
+        "text": text,
+        "requirement_type": requirement_type,
+        "gate_type": gate_type,
+        "deadline": None,
+        "minimum_count": None,
+        "certification": None,
+        "compulsory": rule.get("compulsory"),
+        "procurement_rule": rule,
+        "structured_fields": [],
+        "interpretation_status": status,
+        "uncertainty_reason": (
+            "The source does not establish whether this registration is compulsory."
+            if status == "UNCERTAIN"
+            else None
+        ),
+        "source": {
+            "document": case.requirement_input.document_name,
+            "page": case.requirement_input.page,
+            "section": case.requirement_input.section,
+            "snippet": text,
+        },
+    }
+
+
+def test_multi_obligation_interpretation_binds_only_external_facts_downstream():
+    case = next(
+        item
+        for item in load_cases("regression")
+        if item.id == "external-01-positive-public-gates"
+    )
+    parts = [part.strip().rstrip(".") + "." for part in case.requirement_input.text.split(". ")]
+    payload = {
+        "requirements": [
+            _typed_requirement_record(
+                case,
+                text=parts[0],
+                requirement_type="QUALIFICATION",
+                gate_type="REQUIRED",
+                rule={
+                    "kind": "QUALIFICATION",
+                    "options": [{"code": "CR11", "minimum_grade": "L2"}],
+                    "match": "ANY",
+                    "compulsory": True,
+                },
+            ),
+            _typed_requirement_record(
+                case,
+                text=parts[1],
+                requirement_type="ELIGIBILITY",
+                gate_type="MANDATORY",
+                rule={
+                    "kind": "EVENT_ATTENDANCE",
+                    "event_name": "Tender Briefing and Site Showround",
+                    "compulsory": True,
+                    "event_at": None,
+                },
+            ),
+            _typed_requirement_record(
+                case,
+                text=parts[2],
+                requirement_type="DOCUMENT",
+                gate_type="MANDATORY",
+                rule={
+                    "kind": "REQUIRED_DOCUMENT",
+                    "documents": ["Price attachment", "Technical attachment"],
+                    "match": "ALL",
+                    "compulsory": True,
+                },
+            ),
+        ]
+    }
+    app_settings = Settings(bedrock_model_id="test.bedrock-model")
+    report = EvaluationRunner(
+        TenderInterpreter(FakeBedrockClient(payload), app_settings), app_settings
+    ).run([case], "regression")
+    assert report.requirement_interpretation_accuracy.accuracy_percent == 100
+    assert report.final_operational_state_accuracy.accuracy_percent == 100
+    assert report.cases[0].actual_operational_state == "FEASIBLE"
+
+
+def test_processing_duration_combines_with_authoritative_deadline_downstream():
+    case = next(
+        item
+        for item in load_cases("regression")
+        if item.id == "external-03-clearance-remediation-window"
+    )
+    payload = {
+        "requirements": [
+            _typed_requirement_record(
+                case,
+                text=case.requirement_input.text,
+                requirement_type="DOCUMENT",
+                gate_type="MANDATORY",
+                rule={
+                    "kind": "PROCESSING_WINDOW",
+                    "action": "Submit Clearance Form and obtain drawings clearance",
+                    "deadline": None,
+                    "minimum_processing_hours": 672,
+                    "compulsory": True,
+                },
+            )
+        ]
+    }
+    app_settings = Settings(bedrock_model_id="test.bedrock-model")
+    report = EvaluationRunner(
+        TenderInterpreter(FakeBedrockClient(payload), app_settings), app_settings
+    ).run([case], "regression")
+    assert report.requirement_interpretation_accuracy.accuracy_percent == 100
+    assert report.final_operational_state_accuracy.accuracy_percent == 100
+    assert report.cases[0].actual_operational_state == "RECOVERABLE"
+
+
+def test_unclear_criticality_is_forced_closed_by_typed_rule():
+    case = next(
+        item
+        for item in load_cases("regression")
+        if item.id == "external-07-gra-criticality-unclear"
+    )
+    payload = {
+        "requirements": [
+            _typed_requirement_record(
+                case,
+                text=case.requirement_input.text,
+                requirement_type="COMPLIANCE",
+                gate_type="INFORMATIONAL",
+                rule={
+                    "kind": "QUALIFICATION",
+                    "options": [{"code": "EPU/FBV/10", "minimum_grade": None}],
+                    "match": "ANY",
+                    "compulsory": None,
+                },
+                status="UNCERTAIN",
+            )
+        ]
+    }
+    app_settings = Settings(bedrock_model_id="test.bedrock-model")
+    report = EvaluationRunner(
+        TenderInterpreter(FakeBedrockClient(payload), app_settings), app_settings
+    ).run([case], "regression")
+    assert report.requirement_interpretation_accuracy.accuracy_percent == 100
+    assert report.ambiguity_handling_accuracy.accuracy_percent == 100
+    assert report.final_operational_state_accuracy.accuracy_percent == 100
+    assert report.cases[0].actual_operational_state == "UNCERTAIN"
+
+
+def test_expected_answers_and_deterministic_facts_never_enter_model_prompt():
+    case = next(
+        item
+        for item in load_cases("regression")
+        if item.id == "external-06-shortlist-restriction"
+    )
+    payload = {
+        "requirements": [
+            _typed_requirement_record(
+                case,
+                text=case.requirement_input.text,
+                requirement_type="ELIGIBILITY",
+                gate_type="MANDATORY",
+                rule={
+                    "kind": "PARTICIPATION_RESTRICTION",
+                    "restriction": case.requirement_input.text,
+                    "compulsory": True,
+                },
+            )
+        ]
+    }
+    app_settings = Settings(bedrock_model_id="test.bedrock-model")
+    client = FakeBedrockClient(payload)
+    EvaluationRunner(TenderInterpreter(client, app_settings), app_settings).run(
+        [case], "regression"
+    )
+    prompt = str(client.last_call["prompt"])
+    assert '"expected"' not in prompt
+    assert "final_operational_state" not in prompt
+    assert "can_become_eligible_before_deadline" not in prompt
 
 
 def test_blind_evaluation_flags_unsafe_green_result():

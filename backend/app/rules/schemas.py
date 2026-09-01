@@ -81,7 +81,10 @@ class RequiredDocumentFacts(StrictModel):
 class ProcessingWindowRule(StrictModel):
     kind: Literal["PROCESSING_WINDOW"]
     action: str = Field(min_length=1)
-    deadline: datetime
+    # A clause can state a processing duration without repeating the governing
+    # tender deadline.  Keeping this optional prevents the interpreter from
+    # inventing a date; deterministic facts may supply the authoritative date.
+    deadline: datetime | None = None
     minimum_processing_hours: float = Field(default=0, ge=0)
     compulsory: bool | None
 
@@ -90,6 +93,7 @@ class ProcessingWindowFacts(StrictModel):
     kind: Literal["PROCESSING_WINDOW"]
     completed: bool | None
     can_complete: bool | None
+    governing_deadline: datetime | None = None
     earliest_start_at: datetime | None = None
     estimated_duration_hours: float | None = Field(default=None, ge=0)
 

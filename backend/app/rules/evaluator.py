@@ -283,13 +283,24 @@ def evaluate_processing_window(
             unresolved=[rule.action],
         )
 
+    deadline = rule.deadline or facts.governing_deadline
+    if deadline is None:
+        return _result(
+            kind,
+            AssessmentStatus.UNCERTAIN,
+            None,
+            "The processing duration is known, but no authoritative governing deadline is "
+            "available for comparison.",
+            unresolved=[rule.action],
+        )
+
     start_at = max(evaluation_as_of, facts.earliest_start_at or evaluation_as_of)
     duration = max(
         rule.minimum_processing_hours,
         facts.estimated_duration_hours or 0,
     )
     projected_completion = start_at + timedelta(hours=duration)
-    recoverable = projected_completion <= rule.deadline
+    recoverable = projected_completion <= deadline
     return _result(
         kind,
         AssessmentStatus.UNMET,

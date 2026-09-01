@@ -51,7 +51,7 @@ class EvaluationCase(StrictModel):
     requirement_input: RequirementInterpretationRequest | None
     change_input: ChangeInterpretationRequest | None
     deterministic_scenario: Literal["HERO_R17"] | None
-    deterministic_facts: ProcurementRuleFacts | None = None
+    deterministic_facts: ProcurementRuleFacts | list[ProcurementRuleFacts] | None = None
     companion_rules: list[RuleEvaluationInput] = Field(default_factory=list)
     expected: EvaluationExpected
 
@@ -81,6 +81,7 @@ class CaseResult(StrictModel):
     final_operational_state: Literal["PASS", "FAIL", "NOT_RUN"]
     actual_operational_state: str | None
     unsafe_green_error: bool
+    blocker: str | None = None
     failures: list[CaseFailure]
 
 

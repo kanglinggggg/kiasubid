@@ -1,6 +1,6 @@
 # Final pre-freeze validation report
 
-Date: 28 August 2026 (Asia/Singapore)
+Date: 1 September 2026 (Asia/Singapore)
 
 ## Environment
 
@@ -14,7 +14,8 @@ Date: 28 August 2026 (Asia/Singapore)
 - API documentation: `http://127.0.0.1:8000/docs`
 - Selected provider: Bedrock
 - Selected model: `amazon.nova-lite-v1:0`
-- Provider status: live Bedrock invocation verified in `us-east-1`
+- Provider status: live Bedrock invocation previously verified in `us-east-1`; the current
+  temporary token is expired and the post-hardening rerun is correctly reported as `NOT_RUN`
 - Structured-output mode: prompted JSON schema plus strict local Pydantic/provenance validation
 
 Temporary AWS access-key, secret-key, and session-token fields are populated only in the ignored
@@ -55,7 +56,7 @@ Fresh results from the final tree:
 | Check | Result |
 |---|---:|
 | Ruff | PASS |
-| Backend pytest | 49 passed |
+| Backend pytest | 58 passed |
 | Frontend Vitest | 4 passed in 2 files |
 | TypeScript (`tsc -b`) | PASS |
 | Vite production build | PASS; 1,674 modules transformed |
@@ -87,26 +88,29 @@ verified by the production corrigendum workflow, where R17 v1 remains stored as 
 
 ## Live-model interpretation evaluation
 
-Report: `data/evaluation/live_regression_report.json`
+Current report: `data/evaluation/live_regression_report.json`
 
 - Provider: Bedrock
 - Model: `amazon.nova-lite-v1:0`
-- Provider configured and invoked: true
+- Provider configured: true
 - Total known regression records: 9
-- Requirement interpretation accuracy: 0/7 (0%)
-- Corrigendum matching accuracy: 2/2 (100%)
-- Ambiguity handling accuracy: 6/9 (66.67%)
-- Final operational-state accuracy: `NOT_RUN` for all nine because these interpretation records do
-  not include downstream adapters
+- Current requirement interpretation accuracy: `NOT_RUN`
+- Current corrigendum matching accuracy: `NOT_RUN`
+- Current ambiguity handling accuracy: `NOT_RUN`
+- Current final operational-state accuracy: `NOT_RUN`
 - Unsafe-green errors: 0
 - Genuinely blind cases: 0; no unseen score claimed
 
-Failures were not hidden. Seven requirement cases failed expected extraction. Two were rejected
-after both validation attempts: one returned the unsupported top-level type `QUALIFICATION`, and
-one produced a `PROCESSING_WINDOW` without its required deadline. Five returned valid structures
-whose expected type, gate, or structured fields did not match. The unclear GRA criticality case
-also incorrectly returned `INTERPRETED` instead of `UNCERTAIN`, producing one ambiguity-handling
-error. No prompts or ground truth were changed after observing these results.
+The 1 September post-hardening rerun stopped after the first call returned
+`ExpiredTokenException`. The harness now records this as a provider blocker and leaves all accuracy
+denominators unmeasured instead of misclassifying credential failure as extraction failure.
+
+The preserved 28 August baseline remains part of the evidence: requirement interpretation was
+0/7, corrigendum matching 2/2, and ambiguity handling 6/9. Failures were not hidden. They exposed
+generic defects: rule-kind aliases were not canonicalized, a `PROCESSING_WINDOW` incorrectly
+required a deadline in the same clause, multi-obligation passages lacked deterministic field
+projection, and final operational-state adapters were absent. Those defects are now covered by
+local tests, but no improved live score is claimed until fresh temporary credentials are supplied.
 
 Separately, the live canonical R17 path passed: Bedrock interpreted the natural-language
 corrigendum as `MODIFIED`, matched R17, returned `minimum_count 3 -> 4`, and the deterministic
@@ -287,7 +291,8 @@ A teammate can add deterministic regression JSON under `backend/evaluation/rule_
 production-code change. The nine known interpretation cases now live under
 `backend/evaluation/cases/regression/`; synthetic prompt-development fixtures remain under
 `cases/development/`; genuinely unseen teammate cases belong only under the intentionally empty
-`cases/blind/` folder. `scripts/run-blind-evaluation.ps1` discovers them automatically. Expected
+`cases/blind/` folder. A non-loaded `CASE_TEMPLATE.json.example` documents the strict format, and
+`scripts/run-blind-evaluation.ps1` discovers `.json` cases automatically. Expected
 answers and deterministic facts remain evaluator-side and are never included in the model request.
 Reports separate requirement interpretation, corrigendum matching, ambiguity handling, and final
 operational state, and list unsafe-green errors. No unseen performance was manufactured.
@@ -298,9 +303,8 @@ operational state, and list unsafe-green errors. No unseen performance was manuf
   lacks the Marketplace subscription actions required to enable that model. Nova Lite v1 works
   through prompted JSON plus local validation.
 - No authorized Groq API key/model is configured.
-- Requirement-extraction quality on the known live regression is not release-ready: 0/7 exact
-  extraction matches, including one unsafe ambiguity decision. Corrigendum matching and the R17
-  live-provider proof passed, but this does not erase the extraction failures.
+- The post-hardening Nova Lite evaluation requires refreshed 12-hour temporary credentials. The
+  previous 0/7 extraction baseline remains the latest measured live score until that rerun occurs.
 - PDF upload/OCR and multi-user production hardening are intentionally outside the frozen MVP.
 
 ## Final readiness classification
@@ -309,10 +313,11 @@ operational state, and list unsafe-green errors. No unseen performance was manuf
 |---|---|
 | LOCAL ENGINEERING MVP | READY |
 | DETERMINISTIC DEMO | READY |
-| LIVE LLM VALIDATION | READY — executed; failures documented |
+| LIVE LLM VALIDATION | BLOCKED — refreshed temporary credentials required for post-hardening run |
 | HACKATHON DEMO WITHOUT LIVE PROVIDER | READY |
 | FULL INTENDED HACKATHON STACK | BLOCKED |
 
-The local deterministic demo remains ready. The live R17 story is verified with Nova Lite, but the
-full intended live interpretation layer remains blocked from a readiness claim by poor requirement
-extraction results and unavailable Marketplace permissions for Haiku 4.5.
+The local deterministic demo remains ready. The live R17 story was verified with Nova Lite, but the
+full intended live interpretation layer remains blocked from a readiness claim until the hardened
+interpreter is rerun with fresh temporary credentials. Haiku 4.5 also remains unavailable under the
+sandbox Marketplace/SCP controls.
