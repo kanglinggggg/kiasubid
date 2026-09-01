@@ -35,11 +35,13 @@ def test_regression_development_and_blind_benchmarks_are_separate_and_validated(
     blind = load_cases("blind")
     assert len(regression) == 9
     assert len(development) == 8
-    assert blind == []
+    assert len(blind) == 8
     assert all(case.partition == "REGRESSION" for case in regression)
     assert all(case.partition == "DEVELOPMENT" for case in development)
+    assert all(case.partition == "BLIND" for case in blind)
     assert {case.source_case_id for case in regression} == {str(value) for value in range(1, 10)}
-    for case in [*regression, *development]:
+    assert {case.source_case_id for case in blind} == {f"U{value}" for value in range(1, 9)}
+    for case in [*regression, *development, *blind]:
         expected = case.expected
         assert expected.ambiguity_state in {"INTERPRETED", "UNCERTAIN"}
         assert expected.final_operational_state in {

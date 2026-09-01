@@ -1,0 +1,375 @@
+[
+  {
+    "id": "blind-u1-local-works-experience",
+    "partition": "BLIND",
+    "source_case_id": "U1",
+    "title": "Positive control - local works and experience threshold satisfied",
+    "description": "A critical eligibility bundle requires local delivery, sufficient relevant experience, and supporting evidence.",
+    "source": "GeBIZ_Unseen_Test_Cases_Blind_and_Key.docx / U1 / LTA000ETT26000014",
+    "evaluation_as_of": "2026-03-20T16:00:00+08:00",
+    "kind": "REQUIREMENT",
+    "requirement_input": {
+      "document_name": "LTA000ETT26000014-blind-input.txt",
+      "page": 1,
+      "section": "Critical eligibility bundle",
+      "text": "Tender facts supplied to agent: works must be conducted locally in Singapore; tenderer must have at least 5 years' relevant bus/coach body manufacturing/repair experience and supporting project evidence.\nSynthetic bidder: all refurbishment will be done in Singapore; 7 continuous years of qualifying experience; evidence ready; no other blocker in supplied corpus.",
+      "stable_key_hint": "BLIND-U1"
+    },
+    "change_input": null,
+    "deterministic_scenario": null,
+    "deterministic_facts": [
+      {
+        "kind": "PARTICIPATION_RESTRICTION",
+        "eligible": true,
+        "can_become_eligible_before_deadline": false
+      },
+      {
+        "kind": "QUALIFICATION",
+        "evidence": [
+          {
+            "code": "relevant bus/coach body manufacturing/repair experience",
+            "grade": "7 years",
+            "verified": true,
+            "meets_minimum": true
+          }
+        ],
+        "can_obtain_before_deadline": false
+      },
+      {
+        "kind": "REQUIRED_DOCUMENT",
+        "documents": [
+          {
+            "name": "supporting project evidence",
+            "state": "SUBMITTED",
+            "can_complete_before_deadline": true
+          }
+        ],
+        "submission_open": true
+      }
+    ],
+    "companion_rules": [],
+    "expected": {
+      "requirement_type": "ELIGIBILITY",
+      "gate_type": "MANDATORY",
+      "structured_fields": {
+        "compulsory": true
+      },
+      "ambiguity_state": "INTERPRETED",
+      "affected_requirement": null,
+      "change_type": null,
+      "final_operational_state": "FEASIBLE"
+    }
+  },
+  {
+    "id": "blind-u2-experience-recency",
+    "partition": "BLIND",
+    "source_case_id": "U2",
+    "title": "Relevant experience falls outside the required recency window",
+    "description": "The bidder has relevant experience, but it is older than the mandatory five-year window.",
+    "source": "GeBIZ_Unseen_Test_Cases_Blind_and_Key.docx / U2 / LTA000ETT26000030",
+    "evaluation_as_of": "2026-05-20T16:00:00+08:00",
+    "kind": "REQUIREMENT",
+    "requirement_input": {
+      "document_name": "LTA000ETT26000030-blind-input.txt",
+      "page": 1,
+      "section": "Relevant tunnel-scanning experience",
+      "text": "Tender facts supplied to agent: qualifying tunnel-scanning / HD-imaging experience must fall within the last 5 years and be supported by project references.\nSynthetic bidder: strong relevant experience, but the only qualifying underground-rail project was completed more than 6 years before evaluation_as_of; no qualifying project or ongoing contract within the last 5 years.",
+      "stable_key_hint": "BLIND-U2"
+    },
+    "change_input": null,
+    "deterministic_scenario": null,
+    "deterministic_facts": [
+      {
+        "kind": "QUALIFICATION",
+        "evidence": [
+          {
+            "code": "qualifying tunnel-scanning / HD-imaging experience",
+            "grade": "more than 6 years old",
+            "verified": true,
+            "meets_minimum": false
+          }
+        ],
+        "can_obtain_before_deadline": false
+      },
+      {
+        "kind": "REQUIRED_DOCUMENT",
+        "documents": [
+          {
+            "name": "project references",
+            "state": "SUBMITTED",
+            "can_complete_before_deadline": false
+          }
+        ],
+        "submission_open": true
+      }
+    ],
+    "companion_rules": [],
+    "expected": {
+      "requirement_type": "COMPLIANCE",
+      "gate_type": "MANDATORY",
+      "structured_fields": {
+        "compulsory": true,
+        "minimum_financial_grade": "5 years"
+      },
+      "ambiguity_state": "INTERPRETED",
+      "affected_requirement": null,
+      "change_type": null,
+      "final_operational_state": "BLOCKED"
+    }
+  },
+  {
+    "id": "blind-u3-two-envelope-submission",
+    "partition": "BLIND",
+    "source_case_id": "U3",
+    "title": "Two-envelope submission is missing one ready file",
+    "description": "Tender Price and Price Documents are uploaded while the ready Technical Documents remain unsubmitted.",
+    "source": "GeBIZ_Unseen_Test_Cases_Blind_and_Key.docx / U3 / LTA000ETT26000011",
+    "evaluation_as_of": "2026-05-07T16:00:00+08:00",
+    "kind": "REQUIREMENT",
+    "requirement_input": {
+      "document_name": "LTA000ETT26000011-blind-input.txt",
+      "page": 1,
+      "section": "Mandatory submission bundle",
+      "text": "Tender facts supplied to agent: electronic submission requires Tender Price, Price Documents and Technical Documents.\nSynthetic bidder: satisfies the BCA gate; Tender Price and Price Documents are uploaded; Technical Documents are complete and internally approved but not yet uploaded; tender is still open.",
+      "stable_key_hint": "BLIND-U3"
+    },
+    "change_input": null,
+    "deterministic_scenario": null,
+    "deterministic_facts": {
+      "kind": "REQUIRED_DOCUMENT",
+      "documents": [
+        {
+          "name": "Tender Price",
+          "state": "SUBMITTED",
+          "can_complete_before_deadline": true
+        },
+        {
+          "name": "Price Documents",
+          "state": "SUBMITTED",
+          "can_complete_before_deadline": true
+        },
+        {
+          "name": "Technical Documents",
+          "state": "READY",
+          "can_complete_before_deadline": true
+        }
+      ],
+      "submission_open": true
+    },
+    "companion_rules": [],
+    "expected": {
+      "requirement_type": "DOCUMENT",
+      "gate_type": "MANDATORY",
+      "structured_fields": {
+        "compulsory": true,
+        "tender_price_required": true,
+        "price_documents_required": true,
+        "technical_documents_required": true
+      },
+      "ambiguity_state": "INTERPRETED",
+      "affected_requirement": null,
+      "change_type": null,
+      "final_operational_state": "RECOVERABLE"
+    }
+  },
+  {
+    "id": "blind-u4-electronic-submission-mode",
+    "partition": "BLIND",
+    "source_case_id": "U4",
+    "title": "Manual package prepared instead of required electronic submission",
+    "description": "The package is complete but has not been submitted through the mandatory GeBIZ electronic channel.",
+    "source": "GeBIZ_Unseen_Test_Cases_Blind_and_Key.docx / U4 / JTC000EPQ26000011",
+    "evaluation_as_of": "2026-08-20T16:00:00+08:00",
+    "kind": "REQUIREMENT",
+    "requirement_input": {
+      "document_name": "JTC000EPQ26000011-blind-input.txt",
+      "page": 1,
+      "section": "Submission mode",
+      "text": "Tender facts supplied to agent: pre-qualification submission must be fully electronic via GeBIZ; manual submissions are not acceptable. Closing: 24 Aug 2026 16:00 SGT.\nSynthetic bidder: full package is complete but only a hard-copy/manual submission was prepared; electronic files are available.",
+      "stable_key_hint": "BLIND-U4"
+    },
+    "change_input": null,
+    "deterministic_scenario": null,
+    "deterministic_facts": {
+      "kind": "PARTICIPATION_RESTRICTION",
+      "eligible": false,
+      "can_become_eligible_before_deadline": true
+    },
+    "companion_rules": [],
+    "expected": {
+      "requirement_type": "ELIGIBILITY",
+      "gate_type": "MANDATORY",
+      "structured_fields": {
+        "compulsory": true
+      },
+      "ambiguity_state": "INTERPRETED",
+      "affected_requirement": null,
+      "change_type": null,
+      "final_operational_state": "RECOVERABLE"
+    }
+  },
+  {
+    "id": "blind-u5-optional-site-briefing",
+    "partition": "BLIND",
+    "source_case_id": "U5",
+    "title": "Optional site briefing must not become a blocker",
+    "description": "The source explicitly marks briefing attendance as non-compulsory.",
+    "source": "GeBIZ_Unseen_Test_Cases_Blind_and_Key.docx / U5 / PUB000ETT26000010",
+    "evaluation_as_of": "2026-02-10T16:00:00+08:00",
+    "kind": "REQUIREMENT",
+    "requirement_input": {
+      "document_name": "PUB000ETT26000010-blind-input.txt",
+      "page": 1,
+      "section": "Site Briefing / Attendance Compulsory",
+      "text": "Tender facts supplied to agent: Site Briefing / Showround is marked ‘Attendance Compulsory: No’. Security-clearance and PPE instructions apply to attendees.\nSynthetic bidder: does not attend the 12 Feb briefing; all other supplied eligibility/submission gates are satisfied.",
+      "stable_key_hint": "BLIND-U5"
+    },
+    "change_input": null,
+    "deterministic_scenario": null,
+    "deterministic_facts": {
+      "kind": "EVENT_ATTENDANCE",
+      "attended": false,
+      "attendance_opportunity_open": true,
+      "makeup_available": false
+    },
+    "companion_rules": [],
+    "expected": {
+      "requirement_type": "ELIGIBILITY",
+      "gate_type": "INFORMATIONAL",
+      "structured_fields": {
+        "compulsory": false,
+        "attendance_required": false
+      },
+      "ambiguity_state": "INTERPRETED",
+      "affected_requirement": null,
+      "change_type": null,
+      "final_operational_state": "FEASIBLE"
+    }
+  },
+  {
+    "id": "blind-u6-gra-criticality-unclear",
+    "partition": "BLIND",
+    "source_case_id": "U6",
+    "title": "Listed GRA workhead has unclear criticality",
+    "description": "Public metadata lists a registration but defers mandatory status to unavailable tender documents.",
+    "source": "GeBIZ_Unseen_Test_Cases_Blind_and_Key.docx / U6 / NST000ETT26000043",
+    "evaluation_as_of": "2026-06-15T16:00:00+08:00",
+    "kind": "REQUIREMENT",
+    "requirement_input": {
+      "document_name": "NST000ETT26000043-blind-input.txt",
+      "page": 1,
+      "section": "GRA Supply/Work Heads",
+      "text": "Tender facts supplied to agent: public GeBIZ page lists EPU/CMP/10, but states tenderers must refer to tender documents to determine whether GRA registration is mandatory, non-critical or exempted.\nSynthetic bidder: does not hold EPU/CMP/10; login-gated tender documents are not supplied.",
+      "stable_key_hint": "BLIND-U6"
+    },
+    "change_input": null,
+    "deterministic_scenario": null,
+    "deterministic_facts": {
+      "kind": "QUALIFICATION",
+      "evidence": [
+        {
+          "code": "EPU/CMP/10",
+          "grade": null,
+          "verified": true,
+          "meets_minimum": false
+        }
+      ],
+      "can_obtain_before_deadline": null
+    },
+    "companion_rules": [],
+    "expected": {
+      "requirement_type": "COMPLIANCE",
+      "gate_type": "INFORMATIONAL",
+      "structured_fields": {
+        "compulsory": null,
+        "registration_code": "EPU/CMP/10"
+      },
+      "ambiguity_state": "UNCERTAIN",
+      "affected_requirement": null,
+      "change_type": null,
+      "final_operational_state": "UNCERTAIN"
+    }
+  },
+  {
+    "id": "blind-u7-bca-grade-threshold",
+    "partition": "BLIND",
+    "source_case_id": "U7",
+    "title": "Critical BCA grade is below the stated threshold",
+    "description": "The bidder holds ME04 at L5, below the mandatory L6 threshold, and cannot cure the gap before closing.",
+    "source": "GeBIZ_Unseen_Test_Cases_Blind_and_Key.docx / U7 / LTA000ETT26000080",
+    "evaluation_as_of": "2026-08-29T16:00:00+08:00",
+    "kind": "REQUIREMENT",
+    "requirement_input": {
+      "document_name": "LTA000ETT26000080-blind-input.txt",
+      "page": 1,
+      "section": "Critical Criteria / BCA ME04",
+      "text": "Tender facts supplied to agent: BCA ME04, financial grade L6, is a critical criterion. Closing: 27 Nov 2026.\nSynthetic bidder: holds ME04 at L5 only and confirms L6 cannot be obtained before closing; other supplied gates are satisfied.",
+      "stable_key_hint": "BLIND-U7"
+    },
+    "change_input": null,
+    "deterministic_scenario": null,
+    "deterministic_facts": {
+      "kind": "QUALIFICATION",
+      "evidence": [
+        {
+          "code": "ME04",
+          "grade": "L5",
+          "verified": true,
+          "meets_minimum": false
+        }
+      ],
+      "can_obtain_before_deadline": false
+    },
+    "companion_rules": [],
+    "expected": {
+      "requirement_type": "COMPLIANCE",
+      "gate_type": "MANDATORY",
+      "structured_fields": {
+        "compulsory": true,
+        "registration_code": "ME04",
+        "minimum_financial_grade": "L6"
+      },
+      "ambiguity_state": "INTERPRETED",
+      "affected_requirement": null,
+      "change_type": null,
+      "final_operational_state": "BLOCKED"
+    }
+  },
+  {
+    "id": "blind-u8-stale-corrigendum-snapshot",
+    "partition": "BLIND",
+    "source_case_id": "U8",
+    "title": "Cached pre-corrigendum tender snapshot is stale",
+    "description": "Authoritative metadata signals a corrigendum while the latest tender documents have not been ingested.",
+    "source": "GeBIZ_Unseen_Test_Cases_Blind_and_Key.docx / U8 / LTA000ETT26000061",
+    "evaluation_as_of": "2026-08-14T12:00:00+08:00",
+    "kind": "REQUIREMENT",
+    "requirement_input": {
+      "document_name": "LTA000ETT26000061-blind-input.txt",
+      "page": 1,
+      "section": "Tender version freshness / Corrigendum",
+      "text": "Agent-visible state: cached pre-corrigendum requirement snapshot. A metadata refresh of authoritative GeBIZ now shows the opportunity as updated and displays a Corrigendum. Latest login-gated tender documents have not yet been ingested.",
+      "stable_key_hint": "BLIND-U8"
+    },
+    "change_input": null,
+    "deterministic_scenario": null,
+    "deterministic_facts": {
+      "kind": "SOURCE_FRESHNESS",
+      "latest_version_ingested": false,
+      "change_notice_present": true,
+      "change_content_available": false
+    },
+    "companion_rules": [],
+    "expected": {
+      "requirement_type": "DOCUMENT",
+      "gate_type": "MANDATORY",
+      "structured_fields": {
+        "latest_version_required": true
+      },
+      "ambiguity_state": "UNCERTAIN",
+      "affected_requirement": null,
+      "change_type": null,
+      "final_operational_state": "UNCERTAIN"
+    }
+  }
+]

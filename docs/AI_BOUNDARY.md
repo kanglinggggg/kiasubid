@@ -65,13 +65,13 @@ commercial decision.
 ## Evaluation boundary
 
 The evaluation-only harness under `backend/evaluation/` keeps synthetic development fixtures, the
-  nine known GeBIZ-derived regression cases, and a genuinely blind partition with no scored cases
-separate. It invokes interpretation with fallback disabled and scores requirement extraction,
-corrigendum matching, and ambiguity handling. Final operational state is scored only when a frozen
-  downstream adapter or deterministic facts exist; multi-obligation cases can supply one fact set
-  per typed rule. Missing rule/fact bindings fail closed to `UNCERTAIN`; cases with no adapter are
-  `NOT_RUN`, not fabricated failures or passes. Unsafe-green errors are reported when ground truth is `BLOCKED` or `UNCERTAIN`
-but deterministic output becomes `FEASIBLE`. Expected answers and deterministic facts are never
-sent to the model. The separate generic-rule benchmark scores deterministic requirement results
-and final bid states. Missing source content is handled by a deterministic safety guard because
-sending absent text to a model would invite invention.
+nine known GeBIZ-derived regression cases, and eight teammate-supplied cases frozen in a distinct
+blind partition separate. It invokes interpretation with fallback disabled and scores requirement
+extraction, corrigendum matching, and ambiguity handling. Final operational state is scored only
+when a frozen downstream adapter or deterministic facts exist; multi-obligation cases can supply
+one fact set per typed rule. Missing rule/fact bindings fail closed to `UNCERTAIN`; cases with no
+adapter are `NOT_RUN`, not fabricated failures or passes. Unsafe-green errors are reported when
+ground truth is `BLOCKED` or `UNCERTAIN` but deterministic output becomes `FEASIBLE`. Expected
+answers and deterministic facts are never sent to the model. The separate generic-rule benchmark
+scores deterministic requirement results and final bid states. Missing source content is handled
+by a deterministic safety guard because sending absent text to a model would invite invention.

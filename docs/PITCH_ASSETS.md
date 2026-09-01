@@ -103,7 +103,7 @@ and source freshness.
 | Live corrigendum matching | 2/2 on known regression cases |
 | Live ambiguity handling | Historical baseline: 6/9; hardened rerun currently `NOT_RUN` |
 | Live canonical R17 transition | PASS with `amazon.nova-lite-v1:0` |
-| Genuinely blind AI performance | Not claimed—template provided, no scored blind case ships |
+| Genuinely blind AI performance | Not measured—8 frozen cases are present; first run blocked by an invalid temporary AWS token |
 
 These nine cases informed development. The 100% result is a regression claim about deterministic
 rules, not unseen model accuracy.

@@ -99,11 +99,28 @@ Current report: `data/evaluation/live_regression_report.json`
 - Current ambiguity handling accuracy: `NOT_RUN`
 - Current final operational-state accuracy: `NOT_RUN`
 - Unsafe-green errors: 0
-- Genuinely blind cases: 0; no unseen score claimed
+- Genuinely blind cases: 8 frozen teammate-supplied records; current score `NOT_RUN`
 
 The 1 September post-hardening rerun stopped after the first call returned
 `ExpiredTokenException`. The harness now records this as a provider blocker and leaves all accuracy
 denominators unmeasured instead of misclassifying credential failure as extraction failure.
+
+Current blind report: `data/evaluation/blind_report.json`
+
+- Source set: `GeBIZ_Unseen_Test_Cases_Blind_and_Key.docx`, U1-U8
+- Provider/model: Bedrock / `amazon.nova-lite-v1:0`
+- Total frozen blind records: 8
+- Requirement interpretation: `NOT_RUN` (8)
+- Corrigendum matching: `NOT_APPLICABLE` (8 requirement-only cases)
+- Ambiguity handling: `NOT_RUN` (8)
+- Final operational state: `NOT_RUN` (8)
+- Unsafe-green errors: 0
+- Provider blocker: `UnrecognizedClientException` because the temporary AWS session token is invalid
+
+The blind source passages and evaluator-only answers were frozen before the first call. Expected
+answers and deterministic bidder facts were not included in model prompts. No production prompt or
+rule semantic was changed after reading or attempting this blind set, and no blind accuracy is
+claimed until refreshed credentials permit a real run.
 
 The preserved 28 August baseline remains part of the evidence: requirement interpretation was
 0/7, corrigendum matching 2/2, and ambiguity handling 6/9. Failures were not hidden. They exposed
@@ -290,12 +307,13 @@ No clearly bad local latency was observed.
 A teammate can add deterministic regression JSON under `backend/evaluation/rule_cases/` without a
 production-code change. The nine known interpretation cases now live under
 `backend/evaluation/cases/regression/`; synthetic prompt-development fixtures remain under
-`cases/development/`; genuinely unseen teammate cases belong only under the intentionally empty
+`cases/development/`; the eight frozen teammate-supplied records live only under the
 `cases/blind/` folder. A non-loaded `CASE_TEMPLATE.json.example` documents the strict format, and
 `scripts/run-blind-evaluation.ps1` discovers `.json` cases automatically. Expected
 answers and deterministic facts remain evaluator-side and are never included in the model request.
 Reports separate requirement interpretation, corrigendum matching, ambiguity handling, and final
-operational state, and list unsafe-green errors. No unseen performance was manufactured.
+operational state, and list unsafe-green errors. The first blind run is `NOT_RUN` because its AWS
+session token was invalid; no unseen performance was manufactured.
 
 ## Remaining external blockers and limitations
 
@@ -303,8 +321,9 @@ operational state, and list unsafe-green errors. No unseen performance was manuf
   lacks the Marketplace subscription actions required to enable that model. Nova Lite v1 works
   through prompted JSON plus local validation.
 - No authorized Groq API key/model is configured.
-- The post-hardening Nova Lite evaluation requires refreshed 12-hour temporary credentials. The
-  previous 0/7 extraction baseline remains the latest measured live score until that rerun occurs.
+- The post-hardening Nova Lite regression and eight-case blind evaluations require refreshed
+  temporary credentials. The previous 0/7 known-regression extraction baseline remains the latest
+  measured live score until those reruns occur.
 - PDF upload/OCR and multi-user production hardening are intentionally outside the frozen MVP.
 
 ## Final readiness classification

@@ -7,9 +7,9 @@ Datasets are deliberately separated:
 
 - `cases/development/` contains synthetic fixtures used while building the interpreter, including the hero handoff and semantic-isolation checks.
 - `cases/regression/` contains the nine GeBIZ-derived cases that informed development. They are regression data, not unseen-AI evidence.
-- `cases/blind/` is reserved for genuinely unseen, teammate-authored `.json` cases. It ships with
-  documentation and a non-loaded `.json.example` template but no scored blind case. Production
-  prompts must not be edited to fit answers placed here.
+- `cases/blind/` contains eight teammate-authored cases frozen before their first model run, plus
+  a non-loaded `.json.example` template for later additions. Production prompts must not be edited
+  to fit answers placed here, including after a failed blind run.
 
 Every JSON record declares expected requirement type, gate type, structured fields, ambiguity state, affected requirement, change type, and final operational state. The runner reports four separate metrics and classifies every observed failure as one of the required categories.
 

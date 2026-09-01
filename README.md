@@ -243,8 +243,10 @@ and final operational-state accuracy, and flags unsafe-green errors where a grou
 `BLOCKED`/`UNCERTAIN` case became `FEASIBLE`. Expected answers and deterministic facts are never
 included in model inputs. Copy
 `backend/evaluation/cases/blind/CASE_TEMPLATE.json.example` to a `.json` filename to add a case;
-one facts object supports a single rule and an array supports multi-obligation passages. No blind
-cases ship in the baseline, so no unseen score is manufactured.
+one facts object supports a single rule and an array supports multi-obligation passages. The
+repository currently contains eight teammate-supplied cases that were frozen before their first
+run. Their first run is `NOT_RUN` because the temporary AWS session token is invalid; no unseen
+score is manufactured, and production prompts must not be tuned against their answer key.
 
 The backend suite covers Bedrock- and Groq-shaped provider boundaries, exact source validation,
 prompt-injection defenses, ambiguity, equivalent paraphrases, removal, deadline-only isolation,

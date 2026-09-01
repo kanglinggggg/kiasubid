@@ -1,8 +1,12 @@
 # Blind interpretation cases
 
-This folder intentionally contains no scored `.json` case in the frozen repository. A teammate who
-has not tuned the production prompts can copy the `.json.example` template, add genuinely unseen
-case data, and run:
+This folder contains eight teammate-supplied U1-U8 cases from
+`GeBIZ_Unseen_Test_Cases_Blind_and_Key.docx`. The source input and answer key were frozen before the
+first provider call. The first call was blocked by an invalid temporary AWS session token, so no
+accuracy score exists yet. Do not modify production prompts or rule semantics in response to this
+set's answers or eventual failures.
+
+A teammate adding later genuinely unseen cases can copy the `.json.example` template and run:
 
 ```powershell
 cd C:\GeBIZ
