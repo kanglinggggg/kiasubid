@@ -38,8 +38,8 @@ export function RequirementTable({
     <div className="panel requirement-panel">
       <div className="panel-heading requirement-heading">
         <div>
-          <span className="eyebrow">Obligation map</span>
-          <h2>Requirement Control</h2>
+          <span className="eyebrow">Tender requirements</span>
+          <h2>Requirement Register</h2>
         </div>
         <span className="tracked-count">
           <ShieldCheck size={15} /> {requirements.length} tracked

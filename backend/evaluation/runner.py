@@ -112,7 +112,7 @@ def _fact_sets(case: EvaluationCase) -> list[ProcurementRuleFacts]:
 
 
 def _binding_score(rule: Any, facts: ProcurementRuleFacts) -> int:
-    """Prefer exact canonical identities when several fact sets share a rule kind."""
+    """Prefer matching identifiers when several fact sets share a rule kind."""
     if str(rule.kind) == "QUALIFICATION":
         rule_keys = {qualification_code_key(option.code) for option in rule.options}
         fact_keys = {qualification_code_key(item.code) for item in facts.evidence}
@@ -127,7 +127,7 @@ def _binding_score(rule: Any, facts: ProcurementRuleFacts) -> int:
 def _evaluate_interpreted_rules(
     case: EvaluationCase, requirements: list[StructuredRequirement]
 ) -> tuple[str, list[RuleBindingDiagnostic], str]:
-    """Bind LLM-produced rules to human/registry facts, then run deterministic evaluators."""
+    """Bind interpreted rules to registry facts, then run the rule evaluators."""
     available_facts = list(_fact_sets(case))
     evaluations: list[RuleEvaluationInput] = []
     bindings: list[RuleBindingDiagnostic] = []

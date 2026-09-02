@@ -1,4 +1,4 @@
-import { Check, Clock3, FileText, History, Link2, ShieldCheck, Sparkles } from "lucide-react";
+import { Check, Clock3, FileText, History, Link2, ListChecks, ShieldCheck } from "lucide-react";
 import type { Requirement } from "../types/bid";
 import { StatusPill } from "./StatusPill";
 
@@ -33,7 +33,7 @@ export function RequirementDetail({ requirement }: { requirement: Requirement })
           <ShieldCheck size={14} /> {requirement.gate_type}
         </span>
         <span>
-          <Sparkles size={14} /> {requirement.assessment_method ?? "HUMAN"}
+          <ListChecks size={14} /> {requirement.assessment_method ?? "HUMAN"}
         </span>
         <span>
           <Clock3 size={14} /> {formatDate(requirement.assessed_at)}
@@ -75,7 +75,7 @@ export function RequirementDetail({ requirement }: { requirement: Requirement })
       <section className="source-box">
         <FileText size={17} />
         <div>
-          <span>Source trace</span>
+          <span>Source reference</span>
           <strong>{requirement.source.document}</strong>
           <small>
             Page {requirement.source.page} · Section {requirement.source.section}
@@ -89,7 +89,7 @@ export function RequirementDetail({ requirement }: { requirement: Requirement })
             <span>
               <History size={15} /> Version history
             </span>
-            <small>Audit trail preserved</small>
+            <small>Previous versions retained</small>
           </div>
           {requirement.history.map((version, index) => (
             <div className="history-row" key={version.id}>

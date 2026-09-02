@@ -1,7 +1,7 @@
 # Judge Q&A
 
-These answers describe the frozen local build. They deliberately distinguish implemented behavior
-from planned live-provider validation.
+These answers describe the build we can demonstrate today. They separate working product behavior,
+measured Bedrock results, and limitations that still need human review.
 
 ## Why not ChatGPT plus Excel?
 
@@ -36,11 +36,11 @@ the feasibility card and unresolved-gate explanation show the blocking reason.
 
 ## What is actually Agentic AI here?
 
-The product implements a bounded, stateful workflow rather than an open-ended autonomous agent.
-LangGraph coordinates change detection, requirement versioning, assessment superseding, evidence
-re-evaluation, recovery-task planning, metric recomputation, and activity logging. Each step reads
-and writes typed state and stops at safety conditions. The LLM supplies semantic interpretation;
-deterministic services make operational decisions; a human retains final approval and submission.
+BidOps is agentic in a narrow operational sense: it carries a change across the bid instead of
+returning a one-off chat answer. LangGraph coordinates requirement versioning, assessment
+superseding, evidence rechecks, recovery planning, metric updates, and the audit trail. Every step
+reads and writes typed state and stops when the evidence is insufficient. Bedrock interprets the
+language; rules make the operational decision; a person keeps final approval and submission.
 
 This is intentionally narrow agency: useful autonomy inside a controlled procurement workflow,
 not a bot that can decide or submit a bid on its own.
@@ -113,8 +113,8 @@ Coverage as preparation completeness, not a compliance score.
 
 ## Does the demo depend on AWS being available?
 
-No. The canonical synthetic fixture is a clearly labelled **Interpretation: Demo fallback**, so
-the deterministic product story remains reliable offline. With the active sandbox, Nova Lite has
+No. The main synthetic fixture is clearly labelled **Interpretation: Demo fallback**, so the
+product story remains reliable offline. With the active sandbox, Nova Lite has
 also completed the live R17 path; the UI changed to **Interpretation: Bedrock** only after that
 result was persisted. The post-hardening known regression remains mixed: exact requirement
 interpretation passed 6/7, corrigendum matching passed 2/2, ambiguity handling passed 9/9, and
@@ -133,7 +133,7 @@ respectively, with zero unsafe-green errors.
   9/9 ambiguity handling, and 8/9 final state, with every failure retained;
 - a frozen eight-case blind result of 2/8 requirement interpretation, 7/8 ambiguity handling, and
   4/8 final state, with zero unsafe-green errors;
-- saved desktop and mobile QA screenshots and three repeatable canonical demo runs.
+- saved desktop and mobile QA screenshots and three repeatable main-demo runs.
 
 The nine regression cases informed development and are not presented as unseen model accuracy.
 The separate U1-U8 blind-v1 cases were frozen before their first successful model run. They were

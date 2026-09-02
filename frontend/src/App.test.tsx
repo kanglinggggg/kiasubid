@@ -24,7 +24,7 @@ describe("Bid Control Room", () => {
       {
         id: "main-corrigendum",
         label: "Main corrigendum",
-        description: "Canonical demo",
+        description: "Baseline demo",
         expected_status: "FEASIBLE",
       },
     ]);

@@ -1,6 +1,6 @@
 # Runtime AI boundary
 
-GeBIZ BidOps has exactly two bounded LLM capabilities when the selected provider is configured:
+GeBIZ BidOps gives the selected language model exactly two jobs:
 
 1. **Tender Requirement Interpretation** converts supplied tender page/section text into validated Pydantic `StructuredRequirement` records. It preserves document, page, section, and an exact source snippet. Ambiguous details must be returned as `UNCERTAIN` and left null.
 2. **Corrigendum Semantic Change Interpretation** compares one existing structured requirement with new corrigendum text. It returns `ADDED`, `MODIFIED`, `REMOVED`, or `UNCHANGED`, the affected stable key when identifiable, and the exact structured fields changed.
@@ -13,8 +13,8 @@ Source document, page, and section come from the trusted request envelope. A mod
 non-contiguous or fabricated source snippet fails validation and is retried; it is not silently
 accepted.
 
-After validation, deterministic canonicalization maps the six typed procurement-rule kinds to the
-bounded requirement/gate vocabulary, projects explicitly represented rule fields into stable
+After validation, ordinary code maps the six typed procurement-rule kinds to the supported
+requirement/gate vocabulary, projects explicitly represented rule fields into stable
 structured fields, and assigns unique stable-key suffixes to multiple obligations from one passage.
 It may normalize vocabulary aliases such as `QUALIFICATION` to `COMPLIANCE`, but it cannot add a
 missing qualification, count, deadline, or criticality. A processing duration without an
@@ -25,7 +25,10 @@ that asks a model to ignore validation, reveal prompts, call tools, or choose an
 has no authority. The clients expose no tools, and adversarial development fixtures exercise this
 boundary.
 
-The LLM output does not write to the database and cannot set an assessment, feasibility state, coverage percentage, task, or deadline risk. The canonical corrigendum workflow proceeds only when the validated interpretation is confident, is `MODIFIED`, identifies `R17`, and contains the expected isolated count change. Otherwise it stops before superseding an assessment.
+The model output does not write to the database and cannot set an assessment, feasibility state,
+coverage percentage, task, or deadline risk. The main corrigendum flow proceeds only when the
+validated interpretation is confident, is `MODIFIED`, identifies `R17`, and contains the expected
+isolated count change. Otherwise it stops before superseding an assessment.
 
 ## Deterministic execution
 
@@ -46,12 +49,14 @@ LangGraph sequences these deterministic mutations, but LangGraph itself is not a
 ## Demo fallback
 
 If the selected provider is not configured, unavailable, or repeatedly returns malformed structured
-output, a deliberately narrow rule-based parser handles the synthetic canonical fixture. This is
+output, a deliberately narrow rule-based parser handles the synthetic main fixture. This is
 not an LLM. The UI displays `Interpretation: Bedrock` or `Interpretation: Groq` only after a
 completed workflow has persisted that actual provider mode; configuration alone is not enough.
 Otherwise it displays `Interpretation: Demo fallback`.
 
-The fallback understands the canonical CISSP manpower count amendment, explicit removal, equivalent-count wording, obvious deadline-only changes, and ambiguous clauses. Unmatched language returns `UNCERTAIN`; it does not guess.
+The fallback understands the demo's CISSP manpower count amendment, explicit removal,
+equivalent-count wording, obvious deadline-only changes, and ambiguous clauses. Unmatched language
+returns `UNCERTAIN`; it does not guess.
 Instruction-like source text addressed to a model or AI also returns `UNCERTAIN` and cannot apply a
 change through the fallback.
 

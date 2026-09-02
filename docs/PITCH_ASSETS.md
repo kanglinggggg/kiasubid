@@ -17,9 +17,9 @@ control of the bid decision.
 flowchart LR
     H[Human bid team] -->|supplies page/section text| UI[React control room]
     UI --> API[FastAPI API]
-    API --> INT[Bounded interpretation layer]
+    API --> INT[Tender interpretation]
     INT -->|configured and successful| BR[Amazon Bedrock Converse]
-    INT -->|offline canonical fixture| FB[Explicit demo fallback]
+    INT -->|offline main fixture| FB[Built-in demo interpretation]
     BR --> VAL[Pydantic schema + provenance validation]
     FB --> VAL
     VAL --> WF[LangGraph corrigendum workflow]
@@ -85,7 +85,7 @@ Invariant: **Requirement → Evidence → Assessment → Change → Impact → R
 | Match evidence and evaluate mandatory gates | No | Yes | Supply/verify authoritative evidence |
 | Decide `FEASIBLE`, `RECOVERABLE`, `BLOCKED`, `UNCERTAIN` | No | Yes | Challenge/approve internal conclusion |
 | Compute Critical Gates, Submission Coverage, Deadline Risk | No | Yes | Act on drivers |
-| Create bounded recovery tasks and dependencies | No | Yes | Own and complete tasks |
+| Create recovery tasks and dependencies | No | Yes | Own and complete tasks |
 | Commercial decision, declarations, final approval, submission | No | No automatic action | Sole control |
 
 ## Regression benchmark summary
@@ -103,7 +103,7 @@ and source freshness.
 | Live corrigendum matching | 2/2 on known regression cases |
 | Live ambiguity handling | 9/9 known regression; 7/8 historical frozen blind-v1 run |
 | Live final operational state | 8/9 known regression; 4/8 historical frozen blind-v1 run |
-| Live canonical R17 transition | PASS with `amazon.nova-lite-v1:0` |
+| Live R17 transition | PASS with `amazon.nova-lite-v1:0` |
 | Unsafe-green errors | 0 in known regression and historical frozen blind-v1 run |
 
 These nine cases informed development. The 100% result is a regression claim about deterministic
@@ -117,7 +117,7 @@ rules, not unseen model accuracy.
   changes; blind-v2 intake is ready but intentionally empty. Native structured output with Claude
   Haiku 4.5 is unavailable because the sandbox
   role lacks required Marketplace subscription actions.
-- The canonical data and documents are synthetic.
+- The demo data and documents are synthetic.
 - The product accepts extracted page/section text; PDF upload, OCR, and live GeBIZ retrieval are
   not implemented.
 - No model or system can guarantee extraction completeness; human review and blind evaluation are
@@ -128,13 +128,11 @@ rules, not unseen model accuracy.
 
 ## 30-second pitch
 
-“A tender can be compliant yesterday and unsafe today because one corrigendum invalidates one
-critical assumption buried across documents and spreadsheets. GeBIZ BidOps turns clauses into
-source-linked obligations, connects them to evidence, and propagates validated amendments through
-versioned assessments, feasibility, deadlines, and recovery tasks. The LLM interprets language;
-deterministic rules decide operational state; people retain final control. In our demo, a three-to-
-four engineer change moves the bid from FEASIBLE to RECOVERABLE without erasing history or
-pretending missing evidence is complete.”
+“A bid can look ready in the morning and become unsafe when a corrigendum lands that afternoon.
+GeBIZ BidOps links each requirement to its evidence, keeps earlier decisions as versioned history,
+and shows the team exactly what must be recovered before closing. Bedrock reads the change;
+ordinary rules decide the bid state; people keep the final say. In our demo, one sentence raises
+the manpower minimum from three to four and the bid moves from FEASIBLE to RECOVERABLE.”
 
 ## 60-second pitch
 
@@ -142,11 +140,11 @@ pretending missing evidence is complete.”
 submit. Today, mandatory clauses, staff qualifications, evidence, tasks, and corrigenda live in
 separate documents and spreadsheets. A high completion percentage can hide one fatal gate.
 
-GeBIZ BidOps creates a source-linked operational model: Requirement, Evidence, Assessment, Change,
-Impact, and Recovery Action. A bounded LLM layer extracts requirements and interprets semantic
-changes. Strict validation preserves document, page, section, and exact snippet. From that point,
-ordinary deterministic code versions requirements, supersedes stale assessments, rechecks
-evidence, applies the four-state feasibility policy, and calculates coverage and deadline risk.
+GeBIZ BidOps gives the team one working record: Requirement, Evidence, Assessment, Change, Impact,
+and Recovery Action. Bedrock has one narrow job—turn tender wording into validated structured
+changes with a document, page, section, and exact snippet. From there, ordinary code versions the
+requirement, retires stale assessments, rechecks evidence, applies the four-state feasibility
+policy, and calculates coverage and deadline risk.
 
 When Corrigendum #2 raises R17 from three to four CISSP engineers, BidOps retains v1, creates v2,
 finds that Engineer D's CV and availability are incomplete, and moves FEASIBLE to RECOVERABLE with

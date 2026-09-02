@@ -23,7 +23,6 @@ import {
   RotateCcw,
   Shield,
   ShieldAlert,
-  Sparkles,
   UserRoundCheck,
   Users,
   X,
@@ -244,10 +243,10 @@ function App() {
             title={
               data.interpretation.model_id
                 ? `Live model: ${data.interpretation.model_id}`
-                : "Canonical rule-based fallback"
+                : "Built-in demo interpretation"
             }
           >
-            <Sparkles size={12} /> Interpretation: {data.interpretation.label}
+            <FileSearch size={12} /> Interpretation: {data.interpretation.label}
           </span>
           <span className="company-context">{data.company.name}</span>
           <label className="scenario-switcher" title={activeFixture?.description}>
@@ -291,7 +290,7 @@ function App() {
             </div>
             <h1>{data.bid.title}</h1>
             <p>
-              Live obligation state for <strong>{data.company.name}</strong>
+              Bid readiness for <strong>{data.company.name}</strong>
             </p>
           </div>
           <div className="hero-deadline">
@@ -399,11 +398,11 @@ function App() {
         <section className="panel coverage-breakdown">
           <div className="coverage-heading">
             <div>
-              <span className="eyebrow">Deterministic calculation</span>
-              <h2>Submission Coverage breakdown</h2>
+              <span className="eyebrow">How the score is built</span>
+              <h2>Submission Coverage</h2>
             </div>
             <span className="trace-badge">
-              <CheckCircle2 size={13} /> Backend state traced
+              <CheckCircle2 size={13} /> Calculated from current bid data
             </span>
           </div>
           <div className="coverage-components">
@@ -474,7 +473,11 @@ function App() {
                   </div>
                   <div className="action-status">
                     <span>{task.priority}</span>
-                    {task.depends_on.length > 0 && <small>{task.depends_on.length} dependencies</small>}
+                    {task.depends_on.length > 0 && (
+                      <small>
+                        {task.depends_on.length} {task.depends_on.length === 1 ? "dependency" : "dependencies"}
+                      </small>
+                    )}
                   </div>
                 </div>
               ))}
@@ -483,7 +486,7 @@ function App() {
               <div className="safe-date">
                 <CalendarClock size={16} />
                 <span>
-                  Latest safe verification
+                  Complete verification by
                   <strong>{formatDate(recoveryTasks.at(-1)?.latest_safe_at ?? recoveryTasks.at(-1)!.due_at)}</strong>
                 </span>
               </div>
@@ -535,8 +538,8 @@ function App() {
                   <Check size={18} />
                 </span>
                 <div>
-                  <strong>Bid truth is current</strong>
-                  <p>No later document has invalidated a verified assessment.</p>
+                  <strong>Assessments are current</strong>
+                  <p>No later amendment has changed a verified requirement.</p>
                 </div>
               </div>
             )}
@@ -546,8 +549,8 @@ function App() {
             <article className="panel candidate-panel">
               <div className="panel-heading">
                 <div>
-                  <span className="eyebrow">Evidence Registry match</span>
-                  <h2>Recovery Candidate</h2>
+                  <span className="eyebrow">Potential fourth engineer</span>
+                  <h2>Evidence gap review</h2>
                 </div>
                 <Users size={21} />
               </div>
@@ -586,7 +589,7 @@ function App() {
                 </div>
               </div>
               <p className="candidate-warning">
-                <AlertCircle size={15} /> Candidate found does not equal requirement satisfied.
+                <AlertCircle size={15} /> This candidate counts only after every evidence gap is closed.
               </p>
             </article>
           )}
@@ -634,11 +637,11 @@ function App() {
             {data.human_review.approved ? <CheckCircle2 size={23} /> : <UserRoundCheck size={23} />}
           </div>
           <div className="human-copy">
-            <span className="eyebrow">Final Human Review</span>
+            <span className="eyebrow">Internal decision</span>
             <h2>
               {data.human_review.approved
                 ? `Internal package approved by ${data.human_review.approved_by}`
-                : "Automated analysis completed. Submission remains human-controlled."}
+                : "Checks complete. Your team makes the final call."}
             </h2>
             <p>{data.disclaimer}</p>
           </div>
@@ -665,7 +668,7 @@ function App() {
           <span>
             <Shield size={14} /> GeBIZ BidOps
           </span>
-          <p>LLM interpretation is bounded. Versioning, evidence, gates, recovery, and deadlines remain deterministic.</p>
+          <p>Bedrock interprets clauses. BidOps applies evidence, gate, recovery, and deadline rules.</p>
           <button onClick={() => setActivityOpen(true)}>
             <History size={14} /> View audit activity
           </button>
@@ -685,9 +688,9 @@ function App() {
               <span />
               <Zap size={20} fill="currentColor" />
             </div>
-            <span className="eyebrow">LangGraph workflow running</span>
+            <span className="eyebrow">Applying corrigendum</span>
             <h2>{workflowStages[workflowStage]}</h2>
-            <p>Updating persistent bid state and downstream obligations…</p>
+            <p>Updating requirements, evidence checks, tasks, and deadlines…</p>
             <div className="workflow-progress">
               {workflowStages.map((stage, index) => (
                 <span

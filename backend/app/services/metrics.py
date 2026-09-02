@@ -144,7 +144,7 @@ def submission_coverage_trace(session: Session, tender: Tender) -> dict[str, Any
                 ),
                 "total_units": len(evidence),
                 "unit_label": "records",
-                "rule": "Verified Evidence Registry records divided by all company evidence records in the fixture.",
+                "rule": "Verified Evidence Registry records divided by all company evidence records in the current dataset.",
             },
             "tasks": {
                 "label": "Task Coverage",

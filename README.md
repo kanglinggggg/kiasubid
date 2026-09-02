@@ -26,9 +26,10 @@ Operational feasibility uses four explicit states: `FEASIBLE`, `RECOVERABLE`, `B
 
 The exact implemented formulas, precedence, thresholds, and API trace fields are documented in [Deterministic calculation rules](docs/CALCULATION_RULES.md). The current runtime AI boundary is documented in [Current AI boundary](docs/AI_BOUNDARY.md).
 
-## Why Agentic
+## Why this is more than a chatbot
 
-The system demonstrates agency through a persistent state transition rather than a chatbot:
+BidOps does not answer a prompt and stop. A corrigendum moves through a stateful workflow that
+updates the bid record, rechecks evidence, and leaves the final decision with the team:
 
 ```text
 Persistent bid state
@@ -40,7 +41,11 @@ Persistent bid state
 + human checkpoint
 ```
 
-LangGraph orchestrates the corrigendum workflow. Language interpretation is isolated from deterministic rules: numeric thresholds, certification validity, version history, critical gates, task dependencies, coverage, and deadline slack remain ordinary code. The bundled synthetic documents use a canonical demo fixture so the live demonstration is reliable without cloud credentials; the downstream workflow still creates and persists every real state change.
+LangGraph coordinates the steps. Bedrock handles the language comparison; ordinary code handles
+numeric thresholds, certification validity, version history, critical gates, task dependencies,
+coverage, and deadline slack. The main synthetic fixture also has a built-in interpretation, so the
+demo remains reliable without cloud credentials while still creating the same persisted state
+changes.
 
 ## Architecture
 
@@ -164,7 +169,7 @@ modes; prompted JSON must not be described as Bedrock-native constrained decodin
 
 For temporary Groq validation, set `LLM_PROVIDER=groq`, `GROQ_API_KEY`, and either
 `GROQ_MODEL_ID` or its supported alias `GROQ_MODEL`. Model IDs are never guessed. With no valid
-selected-provider configuration, or when a provider call fails, the canonical rule-based fallback
+selected-provider configuration, or when a provider call fails, the built-in demo interpretation
 is used. The UI displays Bedrock or Groq only after that provider actually produced and persisted
 the interpretation; otherwise it displays Demo fallback.
 
@@ -176,14 +181,14 @@ the interpretation; otherwise it displays Demo fallback.
 4. Show R17 v2: the minimum changes from three to four, while the v1 assessment remains visible as `SUPERSEDED`.
 5. Show the state transition to `RECOVERABLE` and `7 / 8` Critical Gates.
 6. Show Engineer D: CISSP is verified, CV is stale, and availability is unknown. The requirement correctly remains `PARTIAL`.
-7. Show the four recovery tasks, their dependencies, latest safe verification time, and the compact impact chain.
-8. Open **Agent Activity** to show structured events from document parsing through status recomputation.
+7. Show the four recovery tasks, their dependencies, the verification deadline, and the impact chain.
+8. Open **Audit trail** to show the recorded events from document parsing through status recomputation.
 9. Point out the locked human checkpoint. BidOps never submits to GeBIZ.
 10. Click the reset icon to replay the demonstration.
 
 ### Demo reset
 
-The header reset control returns the application to the canonical `FEASIBLE / 8 of 8 / 91% /
+The header reset control returns the application to the baseline `FEASIBLE / 8 of 8 / 91% /
 LOW` state. The equivalent copy-paste command is:
 
 ```powershell
@@ -304,7 +309,7 @@ BidOps supports internal preparation and operational verification. It does not c
   GeBIZ connection or automatic submission path.
 - The HTTP interpretation boundary accepts extracted page/section text. PDF upload and OCR are not
   part of this frozen MVP.
-- Live Bedrock validation uses `amazon.nova-lite-v1:0` in `us-east-1`. The canonical R17 change
+- Live Bedrock validation uses `amazon.nova-lite-v1:0` in `us-east-1`. The R17 demo change
   passed. The final known-regression run scored 6/7 exact requirement interpretations, 2/2
   corrigendum matches, 9/9 ambiguity decisions, and 8/9 final operational states. The frozen
   eight-case blind-v1 set scored 2/8, not applicable, 7/8, and 4/8 respectively, with zero

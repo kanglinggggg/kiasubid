@@ -10,19 +10,19 @@ DEMO_FIXTURES = [
     {
         "id": "main-corrigendum",
         "label": "Main corrigendum demo",
-        "description": "Starts FEASIBLE and preserves the 3→4 CISSP hero workflow.",
+        "description": "Baseline bid with three verified CISSP engineers and every mandatory gate met.",
         "expected_status": "FEASIBLE",
     },
     {
         "id": "blocked-no-fourth-engineer",
         "label": "BLOCKED · no fourth engineer",
-        "description": "Applies Corrigendum #2 after removing the only viable fourth CISSP recovery candidate.",
+        "description": "Corrigendum #2 raises R17 to four, but no verified recovery candidate remains.",
         "expected_status": "BLOCKED",
     },
     {
         "id": "uncertain-ambiguous-clause",
         "label": "UNCERTAIN · ambiguous clause",
-        "description": "Adds a mandatory standby-resource clause whose threshold cannot be determined reliably.",
+        "description": "A mandatory standby-resource clause has no defined count or qualification threshold.",
         "expected_status": "UNCERTAIN",
     },
 ]

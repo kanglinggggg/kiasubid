@@ -1,4 +1,4 @@
-import { Activity, Bot, ChevronRight, X } from "lucide-react";
+import { Activity, ChevronRight, History, X } from "lucide-react";
 import type { ActivityEvent } from "../types/bid";
 
 function eventLabel(eventType: string) {
@@ -35,16 +35,16 @@ export function ActivityDrawer({ open, onClose, events }: ActivityDrawerProps) {
       <aside className={`activity-drawer ${open ? "open" : ""}`} aria-hidden={!open}>
         <div className="drawer-header">
           <div>
-            <span className="eyebrow">Structured observability</span>
-            <h2>Agent Activity</h2>
+            <span className="eyebrow">What changed</span>
+            <h2>Audit trail</h2>
           </div>
           <button className="icon-button" onClick={onClose} aria-label="Close">
             <X size={19} />
           </button>
         </div>
         <div className="drawer-note">
-          <Bot size={17} />
-          <p>Action and decision summaries only. No hidden reasoning is exposed.</p>
+          <History size={17} />
+          <p>Each entry records what changed, when it changed, and which bid item was affected.</p>
         </div>
         <div className="activity-timeline">
           {events.map((event, index) => (

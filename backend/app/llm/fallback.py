@@ -238,6 +238,6 @@ def interpret_change_fallback(
         changed_fields=[],
         resulting_requirement=None,
         interpretation_status="UNCERTAIN",
-        uncertainty_reason="The canonical fallback cannot determine a precise semantic change.",
-        reason_summary="No deterministic canonical change pattern matched.",
+        uncertainty_reason="The demo fallback cannot determine a precise semantic change.",
+        reason_summary="The text does not match a supported demo change pattern.",
     )

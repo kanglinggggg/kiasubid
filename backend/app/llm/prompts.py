@@ -24,7 +24,7 @@ recoverability, task priority, deadline risk, or supplier compliance."""
 
 
 def source_clause_candidates(text: str) -> list[str]:
-    """Mechanically expose source-order clauses without adding semantic claims."""
+    """Split source text in order without interpreting or rewriting it."""
     normalized = text.replace("\r\n", "\n").replace("\r", "\n").strip()
     if not normalized:
         return []
