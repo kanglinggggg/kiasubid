@@ -1,4 +1,9 @@
 .env
+
+# Local source and workshop reference material
+/*.pdf
+/Proposal.md
+
 .pytest_cache/
 .ruff_cache/
 .uv-cache/
