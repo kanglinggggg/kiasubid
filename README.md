@@ -292,8 +292,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\run-bedrock-model-bakeoff.ps1
 The current comparison retained `amazon.nova-lite-v1:0`: it outperformed Nova Micro v1 and the
 Nova 2 Lite system inference profile on the same nine known regression cases.
 
-Competition material: [Judge Q&A](docs/JUDGE_QA.md), [Demo runbook](docs/DEMO_RUNBOOK.md), and
-[Pitch assets](docs/PITCH_ASSETS.md).
+Competition material: [Judge Q&A](docs/JUDGE_QA.md), [Demo runbook](docs/DEMO_RUNBOOK.md),
+[Demo video script](docs/DEMO_VIDEO_SCRIPT.md), and [Pitch assets](docs/PITCH_ASSETS.md).
 
 ## Synthetic data
 

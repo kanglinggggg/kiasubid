@@ -19,6 +19,7 @@ data/logs/
 data/run/
 data/evaluation/
 tmp/
+output/
 frontend/.cache/
 frontend/dist/
 frontend/node_modules/

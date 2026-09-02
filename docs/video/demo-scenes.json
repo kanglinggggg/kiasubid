@@ -1,0 +1,114 @@
+[
+  {
+    "id": "title",
+    "duration_ms": 14000,
+    "title": "GeBIZ BidOps",
+    "caption": "From tender change to an evidence-backed recovery plan",
+    "narration": "A supplier bid can look ready in the morning, until one corrigendum changes a mandatory obligation. GeBIZ BidOps helps the team see that change before it becomes a failed submission."
+  },
+  {
+    "id": "control_room",
+    "duration_ms": 18000,
+    "title": "One operational view",
+    "caption": "Tender, feasibility, critical gates, time remaining and the next action",
+    "narration": "This is the supplier-side Bid Control Room. In one view, the bid manager can identify the tender, operational feasibility, verified critical gates, remaining time, and the immediate action that matters most."
+  },
+  {
+    "id": "initial_metrics",
+    "duration_ms": 15000,
+    "title": "Initial bid state",
+    "caption": "FEASIBLE | 8 of 8 gates | 91 percent coverage | LOW deadline risk",
+    "narration": "The initial bid is feasible. All eight mandatory gates are verified. Submission coverage is ninety-one percent, and the current deadline risk is low. Every value comes from backend state."
+  },
+  {
+    "id": "coverage",
+    "duration_ms": 17000,
+    "title": "Coverage is preparation, not compliance",
+    "caption": "50 percent requirements + 30 percent evidence + 20 percent tasks",
+    "narration": "Submission coverage is not a compliance score. It combines requirement, evidence, and task preparation. A high percentage can never override an unmet mandatory gate, so the operational status remains the controlling decision."
+  },
+  {
+    "id": "r17_source",
+    "duration_ms": 20000,
+    "title": "Requirement R17 is traceable",
+    "caption": "Minimum three CISSP engineers, backed by source and evidence",
+    "narration": "Requirement R seventeen requires at least three C I S S P certified engineers. The assessment is traceable to the source document, page, section, exact clause, and three complete personnel evidence sets."
+  },
+  {
+    "id": "corrigendum_intro",
+    "duration_ms": 18000,
+    "title": "A late corrigendum changes one number",
+    "caption": "The minimum manpower obligation increases from three to four",
+    "narration": "Now a natural-language corrigendum raises the minimum from three engineers to four. This recorded run is clearly labelled Demo fallback. The same R seventeen path has separately passed a real Amazon Bedrock Nova Lite invocation."
+  },
+  {
+    "id": "workflow",
+    "duration_ms": 17000,
+    "title": "Interpret, validate and propagate",
+    "caption": "Semantic change -> source validation -> versioning -> deterministic reassessment",
+    "narration": "BidOps interprets the semantic change, validates the structured output and source, versions the affected requirement, supersedes the old assessment, and then reruns deterministic evidence, gate, recovery, and deadline rules."
+  },
+  {
+    "id": "recoverable_metrics",
+    "duration_ms": 20000,
+    "title": "The bid changes state",
+    "caption": "RECOVERABLE | 7 of 8 gates | 84 percent coverage | MEDIUM risk",
+    "narration": "The result is not a vague warning. Feasibility moves from feasible to recoverable. Critical gates fall from eight of eight to seven of eight, coverage drops to eighty-four percent, and deadline risk rises to medium."
+  },
+  {
+    "id": "candidate",
+    "duration_ms": 16000,
+    "title": "A candidate is not evidence",
+    "caption": "Engineer D: CISSP verified, CV stale, availability unknown",
+    "narration": "The system finds a potential fourth engineer, but it does not count him prematurely. His C I S S P certificate is verified, while his curriculum vitae is stale and his availability remains unknown."
+  },
+  {
+    "id": "recovery_tasks",
+    "duration_ms": 18000,
+    "title": "Recovery becomes executable work",
+    "caption": "Four actions with owners, deadlines and dependencies",
+    "narration": "BidOps creates four dependency-aware actions: request the updated curriculum vitae, confirm availability, update the manpower schedule, and rerun R seventeen verification. Owners and due dates are calculated against the tender deadline."
+  },
+  {
+    "id": "impact_chain",
+    "duration_ms": 17000,
+    "title": "The impact chain stays inspectable",
+    "caption": "Corrigendum -> requirement -> assessment -> evidence gap -> recovery",
+    "narration": "The impact chain keeps the reasoning visible: corrigendum, changed requirement, superseded assessment, evidence shortfall, and recovery actions. The previous requirement and its assessment remain available as history."
+  },
+  {
+    "id": "blocked",
+    "duration_ms": 16000,
+    "title": "Not every gap is recoverable",
+    "caption": "BLOCKED means a mandatory restriction has no credible recovery path",
+    "narration": "BidOps also demonstrates when recovery is not credible. A hard participation restriction produces blocked, even if the rest of the submission package is largely complete. Coverage never overrules the gate."
+  },
+  {
+    "id": "uncertain",
+    "duration_ms": 15000,
+    "title": "Missing authority stays uncertain",
+    "caption": "UNCERTAIN means clarification is required, not that the system failed",
+    "narration": "When authoritative wording or evidence is insufficient, the correct result is uncertain. The system asks for clarification instead of manufacturing a pass, a failure, or an unsupported recovery plan."
+  },
+  {
+    "id": "responsibility",
+    "duration_ms": 20000,
+    "title": "Controlled agentic workflow",
+    "caption": "LLM interprets | deterministic code decides state | humans approve and submit",
+    "narration": "The model has a narrow responsibility: interpret tender language and semantic changes. Deterministic code owns versions, evidence matching, feasibility, coverage, tasks, and deadlines. An authorised person retains final approval and submission."
+  },
+  {
+    "id": "validation",
+    "duration_ms": 20000,
+    "title": "Tested, with limitations visible",
+    "caption": "64 backend tests | 4 frontend tests | 9 of 9 deterministic benchmark | live R17 PASS",
+    "narration": "The current build passes sixty-four backend tests, four frontend tests, and all nine deterministic regression cases. The live Bedrock R seventeen path passed. Broader unseen extraction remains a measured limitation and still requires human review."
+  },
+  {
+    "id": "close",
+    "duration_ms": 12000,
+    "title": "GeBIZ BidOps",
+    "caption": "Know what changed. Know what it affects. Know what to recover.",
+    "narration": "GeBIZ BidOps turns a late tender change into a source-linked recovery plan, before the closing time turns that change into a lost bid."
+  }
+]
