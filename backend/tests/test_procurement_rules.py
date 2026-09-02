@@ -5,6 +5,7 @@ import pytest
 from app.config import Settings
 from app.enums import AssessmentStatus
 from app.rules import RuleEvaluationInput, RuleKind, evaluate_requirement
+from app.rules.identity import document_name_key
 from app.services.assessment import assess_requirement
 from evaluation.rule_runner import load_rule_benchmark_cases, run_rule_benchmark
 from pydantic import ValidationError
@@ -144,3 +145,59 @@ def test_processing_window_without_any_authoritative_deadline_is_uncertain():
         [evaluation], datetime.fromisoformat("2026-09-01T09:00:00+08:00")
     )
     assert result.operational_status == "UNCERTAIN"
+
+
+def test_qualification_binding_uses_canonical_procurement_code_identity():
+    evaluation = RuleEvaluationInput.model_validate(
+        {
+            "rule": {
+                "kind": "QUALIFICATION",
+                "options": [{"code": "BCA workhead CR11", "minimum_grade": "L2"}],
+                "match": "ANY",
+                "compulsory": True,
+            },
+            "facts": {
+                "kind": "QUALIFICATION",
+                "evidence": [
+                    {
+                        "code": "CR11",
+                        "grade": "L3",
+                        "verified": True,
+                        "meets_minimum": True,
+                    }
+                ],
+                "can_obtain_before_deadline": False,
+            },
+        }
+    )
+    result = evaluate_requirement(
+        [evaluation], datetime.fromisoformat("2026-09-01T09:00:00+08:00")
+    )
+    assert result.operational_status == "FEASIBLE"
+
+
+def test_document_binding_ignores_envelope_channel_wording_but_not_artifact_identity():
+    evaluation = RuleEvaluationInput.model_validate(
+        {
+            "rule": {
+                "kind": "REQUIRED_DOCUMENT",
+                "documents": ["Price envelope", "Technical envelope"],
+                "match": "ALL",
+                "compulsory": True,
+            },
+            "facts": {
+                "kind": "REQUIRED_DOCUMENT",
+                "documents": [
+                    {"name": "Price attachment", "state": "READY"},
+                    {"name": "Technical attachment", "state": "SUBMITTED"},
+                ],
+                "submission_open": True,
+            },
+        }
+    )
+    result = evaluate_requirement(
+        [evaluation], datetime.fromisoformat("2026-09-01T09:00:00+08:00")
+    )
+    assert result.operational_status == "RECOVERABLE"
+    assert result.rule_results[0].unresolved_items == ["Price envelope"]
+    assert document_name_key("attachment") != document_name_key("envelope")

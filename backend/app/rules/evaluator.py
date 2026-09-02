@@ -2,6 +2,7 @@ from collections.abc import Iterable
 from datetime import datetime, timedelta
 
 from app.enums import AssessmentStatus, OperationalStatus
+from app.rules.identity import document_name_key, qualification_code_key
 from app.rules.schemas import (
     EventAttendanceFacts,
     EventAttendanceRule,
@@ -113,10 +114,10 @@ def evaluate_qualification(
     if not rule.compulsory:
         return _optional_rule(kind)
 
-    evidence_by_code = {item.code.casefold(): item for item in facts.evidence}
+    evidence_by_code = {qualification_code_key(item.code): item for item in facts.evidence}
     option_states: list[bool | None] = []
     for option in rule.options:
-        evidence = evidence_by_code.get(option.code.casefold())
+        evidence = evidence_by_code.get(qualification_code_key(option.code))
         if evidence is None or evidence.verified is None or evidence.meets_minimum is None:
             option_states.append(None)
         else:
@@ -172,13 +173,13 @@ def evaluate_required_document(
     if not rule.compulsory:
         return _optional_rule(kind)
 
-    fact_by_name = {item.name.casefold(): item for item in facts.documents}
+    fact_by_name = {document_name_key(item.name): item for item in facts.documents}
     submitted: list[str] = []
     unresolved: list[str] = []
     unknown = False
     recoverability: list[bool | None] = []
     for document in rule.documents:
-        fact = fact_by_name.get(document.casefold())
+        fact = fact_by_name.get(document_name_key(document))
         if fact is not None and fact.state == "SUBMITTED":
             submitted.append(document)
             continue

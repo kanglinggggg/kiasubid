@@ -16,17 +16,26 @@ from app.llm.interpreter import (
     TenderInterpreter,
 )
 from app.llm.schemas import ChangeInterpretationEnvelope, StructuredRequirement
-from app.rules import ProcurementRuleFacts, RuleEvaluationInput, evaluate_requirement
+from app.rules import (
+    ProcurementRuleFacts,
+    RuleEvaluationInput,
+    evaluate_requirement,
+    evaluate_rule,
+)
+from app.rules.identity import document_name_key, qualification_code_key
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from evaluation.schema import (
     AccuracyMetric,
+    CaseDiagnostics,
     CaseFailure,
     CaseResult,
     EvaluationCase,
     EvaluationReport,
+    FieldDifference,
+    RuleBindingDiagnostic,
 )
 
 EVALUATION_ROOT = Path(__file__).resolve().parent / "cases"
@@ -34,7 +43,7 @@ DEFAULT_REPORT = Path(__file__).resolve().parents[2] / "data" / "evaluation" / "
 
 
 def load_cases(partition: str) -> list[EvaluationCase]:
-    aliases = {"evaluation": "regression"}
+    aliases = {"evaluation": "regression", "blind-v2": "blind_v2"}
     selected = (
         [aliases.get(partition.lower(), partition.lower())]
         if partition != "all"
@@ -60,8 +69,23 @@ def _actual_fields(requirement: StructuredRequirement) -> dict[str, Any]:
     return fields
 
 
-def _expected_fields_match(expected: dict[str, Any], actual: dict[str, Any]) -> bool:
-    return all(actual.get(key) == value for key, value in expected.items())
+def _differences(expected: dict[str, Any], actual: dict[str, Any]) -> list[FieldDifference]:
+    return [
+        FieldDifference(field=field, expected=value, actual=actual.get(field))
+        for field, value in expected.items()
+        if actual.get(field) != value
+    ]
+
+
+def _difference_summary(differences: list[FieldDifference]) -> str:
+    return "; ".join(
+        f"{item.field}: expected {item.expected!r}, got {item.actual!r}"
+        for item in differences
+    )
+
+
+def _diagnostic_value(value: Any) -> Any:
+    return value.model_dump(mode="json") if hasattr(value, "model_dump") else value
 
 
 def _requirement_match_score(
@@ -87,38 +111,116 @@ def _fact_sets(case: EvaluationCase) -> list[ProcurementRuleFacts]:
     return facts if isinstance(facts, list) else [facts]
 
 
+def _binding_score(rule: Any, facts: ProcurementRuleFacts) -> int:
+    """Prefer exact canonical identities when several fact sets share a rule kind."""
+    if str(rule.kind) == "QUALIFICATION":
+        rule_keys = {qualification_code_key(option.code) for option in rule.options}
+        fact_keys = {qualification_code_key(item.code) for item in facts.evidence}
+        return len(rule_keys & fact_keys)
+    if str(rule.kind) == "REQUIRED_DOCUMENT":
+        rule_keys = {document_name_key(document) for document in rule.documents}
+        fact_keys = {document_name_key(item.name) for item in facts.documents}
+        return len(rule_keys & fact_keys)
+    return 0
+
+
 def _evaluate_interpreted_rules(
     case: EvaluationCase, requirements: list[StructuredRequirement]
-) -> str:
+) -> tuple[str, list[RuleBindingDiagnostic], str]:
     """Bind LLM-produced rules to human/registry facts, then run deterministic evaluators."""
     available_facts = list(_fact_sets(case))
     evaluations: list[RuleEvaluationInput] = []
+    bindings: list[RuleBindingDiagnostic] = []
     unmatched_rule = False
     for requirement in requirements:
         rule = requirement.procurement_rule
         if rule is None:
             unmatched_rule = True
+            bindings.append(
+                RuleBindingDiagnostic(
+                    requirement_stable_key=requirement.stable_key,
+                    rule_kind=None,
+                    fact_kind=None,
+                    binding_status="MISSING_RULE",
+                    reason="The interpreted requirement did not include a typed procurement rule.",
+                )
+            )
             continue
-        matching_index = next(
-            (
-                index
-                for index, facts in enumerate(available_facts)
-                if str(facts.kind) == str(rule.kind)
-            ),
-            None,
+        matching_indexes = [
+            index
+            for index, facts in enumerate(available_facts)
+            if str(facts.kind) == str(rule.kind)
+        ]
+        matching_index = (
+            max(
+                matching_indexes,
+                key=lambda index: _binding_score(rule, available_facts[index]),
+            )
+            if matching_indexes
+            else None
         )
         if matching_index is None:
             unmatched_rule = True
+            bindings.append(
+                RuleBindingDiagnostic(
+                    requirement_stable_key=requirement.stable_key,
+                    rule_kind=str(rule.kind),
+                    fact_kind=None,
+                    binding_status="MISSING_FACT",
+                    reason="No evaluator-side fact set matched the interpreted rule kind.",
+                )
+            )
             continue
         facts = available_facts.pop(matching_index)
-        evaluations.append(RuleEvaluationInput(rule=rule, facts=facts))
+        evaluation = RuleEvaluationInput(rule=rule, facts=facts)
+        evaluations.append(evaluation)
+        rule_result = evaluate_rule(evaluation, case.evaluation_as_of)
+        bindings.append(
+            RuleBindingDiagnostic(
+                requirement_stable_key=requirement.stable_key,
+                rule_kind=str(rule.kind),
+                fact_kind=str(facts.kind),
+                binding_status="MATCHED",
+                evaluation_status=rule_result.status.value,
+                recoverable=rule_result.recoverable,
+                reason=rule_result.reason,
+            )
+        )
 
-    evaluations.extend(case.companion_rules)
+    for companion in case.companion_rules:
+        evaluations.append(companion)
+        rule_result = evaluate_rule(companion, case.evaluation_as_of)
+        bindings.append(
+            RuleBindingDiagnostic(
+                requirement_stable_key=None,
+                rule_kind=str(companion.rule.kind),
+                fact_kind=str(companion.facts.kind),
+                binding_status="MATCHED",
+                evaluation_status=rule_result.status.value,
+                recoverable=rule_result.recoverable,
+                reason=f"Companion rule: {rule_result.reason}",
+            )
+        )
+    for facts in available_facts:
+        bindings.append(
+            RuleBindingDiagnostic(
+                requirement_stable_key=None,
+                rule_kind=None,
+                fact_kind=str(facts.kind),
+                binding_status="UNUSED_FACT",
+                reason="The model did not produce a rule for this evaluator-side fact set.",
+            )
+        )
     if not evaluations or unmatched_rule or available_facts:
         # Missing either a typed rule or authoritative bidder facts cannot safely
         # become a green operational result.
-        return "UNCERTAIN"
-    return evaluate_requirement(evaluations, case.evaluation_as_of).operational_status.value
+        return (
+            "UNCERTAIN",
+            bindings,
+            "At least one interpreted rule or authoritative fact set could not be safely bound.",
+        )
+    result = evaluate_requirement(evaluations, case.evaluation_as_of)
+    return result.operational_status.value, bindings, result.reason
 
 
 def _source_matches_requirement(case: EvaluationCase, requirement: StructuredRequirement) -> bool:
@@ -285,6 +387,7 @@ class EvaluationRunner:
             )
 
         failures: list[CaseFailure] = []
+        diagnostics = CaseDiagnostics()
         actual_state: str | None = None
         interpreted_requirements: list[StructuredRequirement] = []
         try:
@@ -302,12 +405,15 @@ class EvaluationRunner:
                         "The selected live provider did not produce the interpretation result"
                     )
                 requirements = envelope.result.requirements
-                hint = case.requirement_input.stable_key_hint
-                hinted = [item for item in requirements if hint and item.stable_key == hint]
-                candidates = hinted or requirements
+                diagnostics.attempts = envelope.attempts
+                diagnostics.duration_ms = envelope.duration_ms
+                diagnostics.input_tokens = envelope.input_tokens
+                diagnostics.output_tokens = envelope.output_tokens
+                diagnostics.total_tokens = envelope.total_tokens
+                diagnostics.candidate_count = len(requirements)
                 requirement = (
-                    max(candidates, key=lambda item: _requirement_match_score(case, item))
-                    if candidates
+                    max(requirements, key=lambda item: _requirement_match_score(case, item))
+                    if requirements
                     else None
                 )
                 interpreted_requirements = requirements
@@ -322,21 +428,41 @@ class EvaluationRunner:
                     )
                     actual_ambiguity = None
                 else:
-                    extraction_ok = (
-                        requirement.requirement_type == case.expected.requirement_type
-                        and requirement.gate_type == case.expected.gate_type
-                        and _expected_fields_match(
-                            case.expected.structured_fields, _actual_fields(requirement)
-                        )
-                    )
+                    actual_fields = _actual_fields(requirement)
+                    expected_values = {
+                        "requirement_type": case.expected.requirement_type,
+                        "gate_type": case.expected.gate_type,
+                        **case.expected.structured_fields,
+                    }
+                    actual_values = {
+                        "requirement_type": requirement.requirement_type,
+                        "gate_type": requirement.gate_type,
+                        **actual_fields,
+                    }
+                    differences = _differences(expected_values, actual_values)
+                    extraction_ok = not differences
                     provenance_ok = _source_matches_requirement(case, requirement)
+                    diagnostics.selected_stable_key = requirement.stable_key
+                    diagnostics.actual_requirement_type = requirement.requirement_type
+                    diagnostics.actual_gate_type = requirement.gate_type
+                    diagnostics.actual_structured_fields = actual_fields
+                    diagnostics.actual_procurement_rule = (
+                        requirement.procurement_rule.model_dump(mode="json")
+                        if requirement.procurement_rule
+                        else None
+                    )
+                    diagnostics.actual_interpretation_status = (
+                        requirement.interpretation_status
+                    )
+                    diagnostics.source_provenance_match = provenance_ok
+                    diagnostics.field_differences = differences
                     requirement_status = "PASS" if extraction_ok and provenance_ok else "FAIL"
                     if not extraction_ok:
                         failures.append(
                             CaseFailure(
                                 category="extraction error",
                                 stage="requirement interpretation",
-                                detail="Type, gate, or expected structured fields did not match.",
+                                detail=_difference_summary(differences),
                             )
                         )
                     if not provenance_ok:
@@ -364,20 +490,53 @@ class EvaluationRunner:
                         "The selected live provider did not produce the interpretation result"
                     )
                 result = envelope.result
-                changed_values = {item.field: item.new_value for item in result.changed_fields}
-                matching_ok = (
-                    result.affected_stable_key == case.expected.affected_requirement
-                    and result.change_type == case.expected.change_type
-                    and _expected_fields_match(case.expected.structured_fields, changed_values)
-                )
+                diagnostics.attempts = envelope.attempts
+                diagnostics.duration_ms = envelope.duration_ms
+                diagnostics.input_tokens = envelope.input_tokens
+                diagnostics.output_tokens = envelope.output_tokens
+                diagnostics.total_tokens = envelope.total_tokens
+                diagnostics.deterministic_adapters = envelope.deterministic_adapters
+                changed_values = {
+                    item.field: _diagnostic_value(item.new_value)
+                    for item in result.changed_fields
+                }
+                expected_values = {
+                    "affected_requirement": case.expected.affected_requirement,
+                    "change_type": case.expected.change_type,
+                    **case.expected.structured_fields,
+                }
+                actual_values = {
+                    "affected_requirement": result.affected_stable_key,
+                    "change_type": result.change_type,
+                    **changed_values,
+                }
+                differences = _differences(expected_values, actual_values)
+                matching_ok = not differences
                 provenance_ok = _source_matches_change(case, envelope)
+                diagnostics.actual_affected_requirement = result.affected_stable_key
+                diagnostics.actual_change_type = result.change_type
+                diagnostics.actual_changed_fields = changed_values
+                diagnostics.actual_interpretation_status = result.interpretation_status
+                diagnostics.source_provenance_match = provenance_ok
+                diagnostics.field_differences = differences
+                resulting = result.resulting_requirement
+                if resulting is not None:
+                    diagnostics.selected_stable_key = resulting.stable_key
+                    diagnostics.actual_requirement_type = resulting.requirement_type
+                    diagnostics.actual_gate_type = resulting.gate_type
+                    diagnostics.actual_structured_fields = _actual_fields(resulting)
+                    diagnostics.actual_procurement_rule = (
+                        resulting.procurement_rule.model_dump(mode="json")
+                        if resulting.procurement_rule
+                        else None
+                    )
                 change_status = "PASS" if matching_ok and provenance_ok else "FAIL"
                 if not matching_ok:
                     failures.append(
                         CaseFailure(
                             category="semantic matching error",
                             stage="corrigendum matching",
-                            detail="Affected requirement, change type, or changed fields did not match.",
+                            detail=_difference_summary(differences),
                         )
                     )
                 if not provenance_ok:
@@ -412,6 +571,9 @@ class EvaluationRunner:
             if case.deterministic_scenario == "HERO_R17" and downstream_envelope is not None:
                 try:
                     actual_state = _run_hero_downstream(case, downstream_envelope)
+                    diagnostics.deterministic_reason = (
+                        "The production R17 workflow replayed the validated change envelope."
+                    )
                     final_status = (
                         "PASS"
                         if actual_state == case.expected.final_operational_state
@@ -428,13 +590,20 @@ class EvaluationRunner:
                     )
             elif missing_source:
                 actual_state = "UNCERTAIN"
+                diagnostics.deterministic_reason = (
+                    "Missing authoritative source text triggered the deterministic safety guard."
+                )
                 final_status = (
                     "PASS"
                     if actual_state == case.expected.final_operational_state
                     else "FAIL"
                 )
             elif case.deterministic_facts is not None:
-                actual_state = _evaluate_interpreted_rules(case, interpreted_requirements)
+                (
+                    actual_state,
+                    diagnostics.rule_bindings,
+                    diagnostics.deterministic_reason,
+                ) = _evaluate_interpreted_rules(case, interpreted_requirements)
                 final_status = (
                     "PASS"
                     if actual_state == case.expected.final_operational_state
@@ -453,7 +622,8 @@ class EvaluationRunner:
                         category=category,
                         stage="final operational state",
                         detail=(
-                            f"Expected {case.expected.final_operational_state}, got {actual_state}."
+                            f"Expected {case.expected.final_operational_state}, got {actual_state}. "
+                            f"{diagnostics.deterministic_reason or ''}"
                         ),
                     )
                 )
@@ -473,6 +643,7 @@ class EvaluationRunner:
                 unsafe_green_error=unsafe_green,
                 blocker=None,
                 failures=failures,
+                diagnostics=diagnostics,
             )
         except InterpretationUnavailable as exc:
             return CaseResult(
@@ -491,6 +662,7 @@ class EvaluationRunner:
                 unsafe_green_error=False,
                 blocker=f"Live {self.settings.llm_provider.title()} evaluation was not run: {exc}",
                 failures=[],
+                diagnostics=diagnostics,
             )
         except InterpretationFailure as exc:
             applicable = "requirement interpretation" if case.kind == "REQUIREMENT" else "corrigendum matching"
@@ -521,6 +693,7 @@ class EvaluationRunner:
                 unsafe_green_error=False,
                 blocker=None,
                 failures=failures,
+                diagnostics=diagnostics,
             )
 
 
@@ -528,7 +701,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Run isolated live-model interpretation evaluation")
     parser.add_argument(
         "--partition",
-        choices=["development", "regression", "blind", "evaluation", "all"],
+        choices=["development", "regression", "blind", "blind-v2", "evaluation", "all"],
         default="regression",
     )
     parser.add_argument("--output", type=Path, default=DEFAULT_REPORT)

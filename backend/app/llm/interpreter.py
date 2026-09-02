@@ -1,6 +1,7 @@
 import json
 import re
 from collections.abc import Callable
+from time import perf_counter
 from typing import Any, TypeVar
 
 from pydantic import BaseModel, ValidationError
@@ -27,6 +28,7 @@ from app.llm.schemas import (
     StructuredField,
     StructuredRequirement,
 )
+from app.rules.identity import display_qualification_code
 from app.rules.schemas import (
     EventAttendanceRule,
     ParticipationRestrictionRule,
@@ -132,6 +134,14 @@ def _field_name_for_document(document: str) -> str:
     return f"{stem}_required"
 
 
+def _canonical_document_label(document: str, source_text: str) -> str:
+    """Distinguish the required artifact from the envelope used to submit it."""
+    label = " ".join(document.split())
+    if "envelope" in label.casefold() and "attachment" in source_text.casefold():
+        label = re.sub(r"\benvelopes?\b", "attachment", label, flags=re.IGNORECASE)
+    return label
+
+
 def _canonicalize_requirement(
     payload: RequirementInterpretationRequest,
     requirement: StructuredRequirement,
@@ -164,6 +174,14 @@ def _canonicalize_requirement(
         if isinstance(rule, EventAttendanceRule):
             fields["attendance_required"] = rule.compulsory is True
         elif isinstance(rule, QualificationRule):
+            rule = rule.model_copy(
+                update={
+                    "options": [
+                        option.model_copy(update={"code": display_qualification_code(option.code)})
+                        for option in rule.options
+                    ]
+                }
+            )
             if len(rule.options) == 1:
                 option = rule.options[0]
                 fields["registration_code"] = option.code
@@ -172,6 +190,14 @@ def _canonicalize_requirement(
             else:
                 fields["alternative_registration_allowed"] = rule.match == "ANY"
         elif isinstance(rule, RequiredDocumentRule):
+            rule = rule.model_copy(
+                update={
+                    "documents": [
+                        _canonical_document_label(document, payload.text)
+                        for document in rule.documents
+                    ]
+                }
+            )
             for document in rule.documents:
                 fields[_field_name_for_document(document)] = True
         elif isinstance(rule, ProcessingWindowRule):
@@ -204,6 +230,7 @@ def _canonicalize_requirement(
             "requirement_type": requirement_type,
             "gate_type": gate_type,
             "compulsory": compulsory,
+            "procurement_rule": rule,
             "structured_fields": [
                 StructuredField(name=name, value=value) for name, value in sorted(fields.items())
             ],
@@ -237,19 +264,55 @@ class TenderInterpreter:
         output_model: type[OutputModel],
         validator: Callable[[OutputModel], None] | None = None,
         normalizer: PayloadNormalizer | None = None,
-    ) -> tuple[OutputModel, int, str, str]:
+    ) -> tuple[
+        OutputModel,
+        int,
+        str,
+        str,
+        float,
+        int | None,
+        int | None,
+        int | None,
+    ]:
         client = self._configured_client()
         current_prompt = prompt
         last_error = ""
         last_output = ""
+        duration_ms = 0.0
+        input_tokens = 0
+        output_tokens = 0
+        total_tokens = 0
+        saw_input_tokens = False
+        saw_output_tokens = False
+        saw_total_tokens = False
         total_attempts = self._settings.llm_max_retries + 1
         for attempt in range(1, total_attempts + 1):
+            started = perf_counter()
             last_output = client.generate_json(
                 system=SYSTEM_PROMPT,
                 prompt=current_prompt,
                 schema=schema,
                 schema_name=schema_name,
             )
+            measured_duration = round((perf_counter() - started) * 1000, 2)
+            invocation = getattr(client, "last_invocation", None)
+            duration_ms += getattr(invocation, "duration_ms", measured_duration)
+            for field, accumulator in (
+                ("input_tokens", "input_tokens"),
+                ("output_tokens", "output_tokens"),
+                ("total_tokens", "total_tokens"),
+            ):
+                value = getattr(invocation, field, None)
+                if isinstance(value, int):
+                    if accumulator == "input_tokens":
+                        input_tokens += value
+                        saw_input_tokens = True
+                    elif accumulator == "output_tokens":
+                        output_tokens += value
+                        saw_output_tokens = True
+                    else:
+                        total_tokens += value
+                        saw_total_tokens = True
             try:
                 raw_payload = _json_object(last_output)
                 if normalizer is not None:
@@ -257,7 +320,16 @@ class TenderInterpreter:
                 result = output_model.model_validate(raw_payload)
                 if validator is not None:
                     validator(result)
-                return result, attempt, client.model_id, getattr(client, "mode", "BEDROCK")
+                return (
+                    result,
+                    attempt,
+                    client.model_id,
+                    getattr(client, "mode", "BEDROCK"),
+                    round(duration_ms, 2),
+                    input_tokens if saw_input_tokens else None,
+                    output_tokens if saw_output_tokens else None,
+                    total_tokens if saw_total_tokens else None,
+                )
             except (ValidationError, ValueError, json.JSONDecodeError) as exc:
                 last_error = str(exc)
                 current_prompt = repair_prompt(prompt, last_output, last_error)
@@ -279,7 +351,16 @@ class TenderInterpreter:
                 result=interpret_requirement_fallback(payload),
             )
         try:
-            result, attempts, model_id, mode = self._invoke(
+            (
+                result,
+                attempts,
+                model_id,
+                mode,
+                duration_ms,
+                input_tokens,
+                output_tokens,
+                total_tokens,
+            ) = self._invoke(
                 prompt=requirement_prompt(payload),
                 schema=requirement_schema(),
                 schema_name="tender_requirements",
@@ -310,6 +391,10 @@ class TenderInterpreter:
                 mode=mode,
                 model_id=model_id,
                 attempts=attempts,
+                duration_ms=duration_ms,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                total_tokens=total_tokens,
                 result=RequirementInterpretationResult(requirements=normalized),
             )
         except ModelUnavailable as exc:
@@ -347,13 +432,23 @@ class TenderInterpreter:
                 result=interpret_change_fallback(payload),
             )
         try:
-            result, attempts, model_id, mode = self._invoke(
+            (
+                result,
+                attempts,
+                model_id,
+                mode,
+                duration_ms,
+                input_tokens,
+                output_tokens,
+                total_tokens,
+            ) = self._invoke(
                 prompt=change_prompt(payload),
                 schema=change_schema(),
                 schema_name="corrigendum_change",
                 output_model=ChangeInterpretationResult,
                 validator=lambda result: self._validate_change_against_input(payload, result),
             )
+            deterministic_adapters: list[str] = []
             if result.resulting_requirement is not None:
                 candidate = result.resulting_requirement
                 snippet = candidate.source.snippet
@@ -365,10 +460,29 @@ class TenderInterpreter:
                     section=payload.section,
                     snippet=snippet,
                 )
+                rule = candidate.procurement_rule
+                if (
+                    rule is None
+                    and candidate.requirement_type == "DEADLINE"
+                    and candidate.deadline is not None
+                    and candidate.compulsory is True
+                ):
+                    rule = ProcessingWindowRule(
+                        kind="PROCESSING_WINDOW",
+                        action=candidate.text,
+                        deadline=candidate.deadline,
+                        minimum_processing_hours=0,
+                        compulsory=True,
+                    )
+                    deterministic_adapters.append("DEADLINE_TO_PROCESSING_WINDOW")
                 result = result.model_copy(
                     update={
                         "resulting_requirement": candidate.model_copy(
-                            update={"source": source, "stable_key": result.affected_stable_key}
+                            update={
+                                "source": source,
+                                "stable_key": result.affected_stable_key,
+                                "procurement_rule": rule,
+                            }
                         )
                     }
                 )
@@ -376,6 +490,11 @@ class TenderInterpreter:
                 mode=mode,
                 model_id=model_id,
                 attempts=attempts,
+                duration_ms=duration_ms,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                total_tokens=total_tokens,
+                deterministic_adapters=deterministic_adapters,
                 result=result,
             )
         except ModelUnavailable as exc:

@@ -99,12 +99,12 @@ and source freshness.
 | Deterministic requirement-result accuracy | 9/9 (100%) |
 | Deterministic overall bid-status accuracy | 9/9 (100%) |
 | Unsupported cases | 0 |
-| Live requirement interpretation | 4/7 known regression; 2/8 frozen blind set |
+| Live requirement interpretation | 6/7 known regression; 2/8 historical frozen blind-v1 run |
 | Live corrigendum matching | 2/2 on known regression cases |
-| Live ambiguity handling | 9/9 known regression; 7/8 frozen blind set |
-| Live final operational state | 6/9 known regression; 4/8 frozen blind set |
+| Live ambiguity handling | 9/9 known regression; 7/8 historical frozen blind-v1 run |
+| Live final operational state | 8/9 known regression; 4/8 historical frozen blind-v1 run |
 | Live canonical R17 transition | PASS with `amazon.nova-lite-v1:0` |
-| Unsafe-green errors | 0 in known regression and frozen blind runs |
+| Unsafe-green errors | 0 in known regression and historical frozen blind-v1 run |
 
 These nine cases informed development. The 100% result is a regression claim about deterministic
 rules, not unseen model accuracy.
@@ -112,8 +112,10 @@ rules, not unseen model accuracy.
 ## Current limitations
 
 - Live Bedrock results are mixed: Nova Lite passed the R17 path and both known corrigendum cases,
-  but exact requirement interpretation reached only 4/7 on known regression and 2/8 on the frozen
-  blind set. Native structured output with Claude Haiku 4.5 is unavailable because the sandbox
+  while exact requirement interpretation reached 6/7 on known regression and 2/8 on the historical
+  frozen blind-v1 run. The blind-v1 set was not rerun after this round's known-regression-driven
+  changes; blind-v2 intake is ready but intentionally empty. Native structured output with Claude
+  Haiku 4.5 is unavailable because the sandbox
   role lacks required Marketplace subscription actions.
 - The canonical data and documents are synthetic.
 - The product accepts extracted page/section text; PDF upload, OCR, and live GeBIZ retrieval are

@@ -249,6 +249,18 @@ successful model run. Nova Lite scored 2/8 exact requirement interpretations, 7/
 decisions, and 4/8 final operational states, with zero unsafe-green errors. These results are
 retained without tuning production prompts against the answer key.
 
+That eight-case folder is now the observed **blind v1** set. It is retained as historical first-run
+evidence and is not used for prompt or model selection. For the next genuinely unseen evaluation,
+a teammate must place sealed cases under `backend/evaluation/cases/blind_v2/` and run:
+
+```powershell
+cd C:\GeBIZ
+powershell -ExecutionPolicy Bypass -File .\scripts\run-blind-v2-evaluation.ps1
+```
+
+The blind-v2 command refuses to run while the folder has no `.json` cases. The repository does not
+manufacture unseen ground truth or a performance claim.
+
 The backend suite covers Bedrock- and Groq-shaped provider boundaries, exact source validation,
 prompt-injection defenses, ambiguity, equivalent paraphrases, removal, deadline-only isolation,
 malformed output retry/failure, the natural-language R17 transition, immutable version history,
@@ -261,8 +273,19 @@ Authorized external benchmark cases can be added as normalized JSON without chan
 Live interpretation evaluation is separate from those deterministic benchmarks. Known
 GeBIZ-derived cases live under `backend/evaluation/cases/regression/`; development fixtures live
 under `backend/evaluation/cases/development/`; genuinely unseen teammate cases belong only under
-`backend/evaluation/cases/blind/`. The live runner disables fallback and writes a
-failure-classified JSON report. See [the interpretation evaluation guide](backend/evaluation/README.md).
+`backend/evaluation/cases/blind_v2/`. The live runner disables fallback and writes a
+failure-classified JSON report with exact field differences, rule/fact bindings, attempts,
+latency, and token usage. See [the interpretation evaluation guide](backend/evaluation/README.md).
+
+To compare cheap Bedrock models without touching blind cases, run the fixed-prompt known-regression
+bake-off:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\run-bedrock-model-bakeoff.ps1
+```
+
+The current comparison retained `amazon.nova-lite-v1:0`: it outperformed Nova Micro v1 and the
+Nova 2 Lite system inference profile on the same nine known regression cases.
 
 Competition material: [Judge Q&A](docs/JUDGE_QA.md), [Demo runbook](docs/DEMO_RUNBOOK.md), and
 [Pitch assets](docs/PITCH_ASSETS.md).
@@ -282,10 +305,11 @@ BidOps supports internal preparation and operational verification. It does not c
 - The HTTP interpretation boundary accepts extracted page/section text. PDF upload and OCR are not
   part of this frozen MVP.
 - Live Bedrock validation uses `amazon.nova-lite-v1:0` in `us-east-1`. The canonical R17 change
-  passed. The post-hardening known regression scored 4/7 exact requirement interpretations, 2/2
-  corrigendum matches, 9/9 ambiguity decisions, and 6/9 final operational states. The frozen
-  eight-case blind set scored 2/8, not applicable, 7/8, and 4/8 respectively, with zero
-  unsafe-green errors. Native JSON-schema output with Claude Haiku 4.5 remains unavailable because
+  passed. The final known-regression run scored 6/7 exact requirement interpretations, 2/2
+  corrigendum matches, 9/9 ambiguity decisions, and 8/9 final operational states. The frozen
+  eight-case blind-v1 set scored 2/8, not applicable, 7/8, and 4/8 respectively, with zero
+  unsafe-green errors on its historical first run; it was not rerun or used for this round's
+  selection. Native JSON-schema output with Claude Haiku 4.5 remains unavailable because
   the sandbox role lacks
   `aws-marketplace:ViewSubscriptions` and `aws-marketplace:Subscribe`; Nova Lite uses prompted JSON
   plus strict local validation.

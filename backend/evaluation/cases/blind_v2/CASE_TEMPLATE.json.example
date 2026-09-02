@@ -1,0 +1,37 @@
+{
+  "id": "blind-v2-team-001",
+  "partition": "BLIND",
+  "source_case_id": "team-owned-sealed-reference",
+  "title": "Short human-readable title",
+  "description": "Why this case matters and when its source and key were frozen.",
+  "source": "Authorized source reference",
+  "evaluation_as_of": "2026-09-02T12:00:00+08:00",
+  "kind": "REQUIREMENT",
+  "requirement_input": {
+    "document_name": "authorized-unseen-source.pdf",
+    "page": 1,
+    "section": "Relevant section",
+    "text": "Paste only the sealed source passage that the model may interpret.",
+    "stable_key_hint": "BLIND-V2-001"
+  },
+  "change_input": null,
+  "deterministic_scenario": null,
+  "deterministic_facts": {
+    "kind": "SOURCE_FRESHNESS",
+    "latest_version_ingested": null,
+    "change_notice_present": null,
+    "change_content_available": null
+  },
+  "companion_rules": [],
+  "expected": {
+    "requirement_type": "DOCUMENT",
+    "gate_type": "INFORMATIONAL",
+    "structured_fields": {
+      "compulsory": null
+    },
+    "ambiguity_state": "UNCERTAIN",
+    "affected_requirement": null,
+    "change_type": null,
+    "final_operational_state": "UNCERTAIN"
+  }
+}

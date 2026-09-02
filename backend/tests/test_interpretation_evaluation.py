@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from pathlib import Path
 
 from app.config import Settings
@@ -33,9 +34,11 @@ def test_regression_development_and_blind_benchmarks_are_separate_and_validated(
     regression = load_cases("regression")
     development = load_cases("development")
     blind = load_cases("blind")
+    blind_v2 = load_cases("blind-v2")
     assert len(regression) == 9
     assert len(development) == 8
     assert len(blind) == 8
+    assert blind_v2 == []
     assert all(case.partition == "REGRESSION" for case in regression)
     assert all(case.partition == "DEVELOPMENT" for case in development)
     assert all(case.partition == "BLIND" for case in blind)
@@ -54,6 +57,10 @@ def test_regression_development_and_blind_benchmarks_are_separate_and_validated(
         "backend/evaluation/cases/blind/CASE_TEMPLATE.json.example"
     )
     EvaluationCase.model_validate(json.loads(template.read_text(encoding="utf-8")))
+    v2_template = Path(
+        "backend/evaluation/cases/blind_v2/CASE_TEMPLATE.json.example"
+    )
+    EvaluationCase.model_validate(json.loads(v2_template.read_text(encoding="utf-8")))
 
 
 def test_live_evaluation_reports_configuration_blocker_without_fallback_scores():
@@ -306,6 +313,91 @@ def test_unclear_criticality_is_forced_closed_by_typed_rule():
     assert report.ambiguity_handling_accuracy.accuracy_percent == 100
     assert report.final_operational_state_accuracy.accuracy_percent == 100
     assert report.cases[0].actual_operational_state == "UNCERTAIN"
+
+
+def test_deadline_change_gets_deterministic_processing_window_adapter():
+    case = next(
+        item
+        for item in load_cases("regression")
+        if item.id == "external-09-deposit-deadline-corrigendum"
+    )
+    existing = case.change_input.existing_requirement
+    deadline = datetime.fromisoformat("2026-05-05T17:00:00+08:00")
+    resulting = existing.model_copy(
+        update={
+            "text": case.change_input.text,
+            "deadline": deadline,
+            "source": RequirementSource(
+                document=case.change_input.corrigendum_document,
+                page=case.change_input.page,
+                section=case.change_input.section,
+                snippet=case.change_input.text,
+            ),
+        }
+    )
+    payload = {
+        "change_type": "MODIFIED",
+        "affected_stable_key": "EXT-09",
+        "changed_fields": [
+            {"field": "text", "old_value": existing.text, "new_value": case.change_input.text},
+            {
+                "field": "deadline",
+                "old_value": existing.deadline.isoformat(),
+                "new_value": deadline.isoformat(),
+            },
+        ],
+        "resulting_requirement": resulting.model_dump(mode="json"),
+        "interpretation_status": "INTERPRETED",
+        "uncertainty_reason": None,
+        "reason_summary": "The deposit deadline is extended.",
+    }
+    app_settings = Settings(bedrock_model_id="test.bedrock-model")
+    report = EvaluationRunner(
+        TenderInterpreter(FakeBedrockClient(payload), app_settings), app_settings
+    ).run([case], "regression")
+    result = report.cases[0]
+    assert result.corrigendum_matching == "PASS"
+    assert result.actual_operational_state == "RECOVERABLE"
+    assert result.diagnostics.actual_procurement_rule["kind"] == "PROCESSING_WINDOW"
+    assert result.diagnostics.deterministic_adapters == [
+        "DEADLINE_TO_PROCESSING_WINDOW"
+    ]
+    assert result.diagnostics.rule_bindings[0].binding_status == "MATCHED"
+
+
+def test_evaluation_diagnostics_record_exact_structured_difference():
+    case = next(
+        item
+        for item in load_cases("regression")
+        if item.id == "external-01-positive-public-gates"
+    )
+    payload = {
+        "requirements": [
+            _typed_requirement_record(
+                case,
+                text=case.requirement_input.text,
+                requirement_type="COMPLIANCE",
+                gate_type="MANDATORY",
+                rule={
+                    "kind": "QUALIFICATION",
+                    "options": [{"code": "CR99", "minimum_grade": "L1"}],
+                    "match": "ANY",
+                    "compulsory": True,
+                },
+            )
+        ]
+    }
+    app_settings = Settings(bedrock_model_id="test.bedrock-model")
+    report = EvaluationRunner(
+        TenderInterpreter(FakeBedrockClient(payload), app_settings), app_settings
+    ).run([case], "regression")
+    differences = report.cases[0].diagnostics.field_differences
+    assert {item.field for item in differences} == {
+        "registration_code",
+        "minimum_financial_grade",
+    }
+    assert next(item for item in differences if item.field == "registration_code").actual == "CR99"
+    assert report.cases[0].diagnostics.rule_bindings
 
 
 def test_expected_answers_and_deterministic_facts_never_enter_model_prompt():

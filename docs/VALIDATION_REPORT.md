@@ -56,7 +56,7 @@ Fresh results from the final tree:
 | Check | Result |
 |---|---:|
 | Ruff | PASS |
-| Backend pytest | 58 passed |
+| Backend pytest | 64 passed |
 | Frontend Vitest | 4 passed in 2 files |
 | TypeScript (`tsc -b`) | PASS |
 | Vite production build | PASS; 1,674 modules transformed |
@@ -88,24 +88,31 @@ verified by the production corrigendum workflow, where R17 v1 remains stored as 
 
 ## Live-model interpretation evaluation
 
-Current report: `data/evaluation/live_regression_report.json`
+Current selected-model report: `data/evaluation/model_bakeoff/amazon.nova-lite-v1_0.json`
 
 - Provider: Bedrock
 - Model: `amazon.nova-lite-v1:0`
 - Provider configured: true
 - Total known regression records: 9
-- Current requirement interpretation accuracy: 4/7 (57.14%)
+- Current requirement interpretation accuracy: 6/7 (85.71%)
 - Current corrigendum matching accuracy: 2/2 (100%)
 - Current ambiguity handling accuracy: 9/9 (100%)
-- Current final operational-state accuracy: 6/9 (66.67%)
+- Current final operational-state accuracy: 8/9 (88.89%)
 - Unsafe-green errors: 0
 - Provider blockers: 0
 - Genuinely blind cases: 8 frozen teammate-supplied records
 
-Known-regression failures were retained exactly: extraction errors in cases 1, 5, and 7;
-deterministic final-state mismatches in cases 1 and 5; and a deadline final-state mismatch in case
-9. The model failed closed to `UNCERTAIN` for every final-state mismatch, rather than producing an
-unsafe green result.
+Known-regression failures were retained exactly. Case 7 omitted the qualification obligation and
+returned only source-freshness uncertainty, producing one extraction error while still reaching the
+correct `UNCERTAIN` final state. Case 3 extracted the expected four-week processing rule but also a
+separate mandatory clearance-form document rule for which the evaluator fixture has no authoritative
+document fact; the binding therefore failed closed to `UNCERTAIN` instead of coercing the expected
+`RECOVERABLE` state. No unsafe-green result occurred.
+
+The selected run recorded one attempt count per case, exact field differences, provenance checks,
+rule/fact bindings, deterministic reasons, 36,247 ms aggregate provider latency, 23,007 input
+tokens, 3,591 output tokens, and 26,598 total tokens. None of those evaluator diagnostics or expected
+answers entered the model prompt.
 
 Current blind report: `data/evaluation/blind_report.json`
 
@@ -120,8 +127,11 @@ Current blind report: `data/evaluation/blind_report.json`
 - Provider blockers: 0
 
 The blind source passages and evaluator-only answers were frozen before the first call. Expected
-answers and deterministic bidder facts were not included in model prompts. No production prompt or
-rule semantic was changed after reading or running this blind set.
+answers and deterministic bidder facts were not included in model prompts. This blind-v1 set is now
+historical observed evidence: it was not used to choose this round's prompt, deterministic
+normalizers, or model, and it was not rerun after those known-regression-driven changes. A separate
+`cases/blind_v2/` intake is intentionally empty and ready for the next teammate-sealed evaluation;
+no blind-v2 performance is claimed.
 
 Blind failures were retained exactly: extraction errors in U1, U2, U4, U6, U7, and U8;
 deterministic final-state mismatches in U1, U2, U4, and U7; and an ambiguity-handling error in U5.
@@ -139,6 +149,21 @@ Separately, the live canonical R17 path passed: Bedrock interpreted the natural-
 corrigendum as `MODIFIED`, matched R17, returned `minimum_count 3 -> 4`, and the deterministic
 workflow produced `FEASIBLE -> RECOVERABLE` and `8/8 -> 7/8`.
 
+### Final interpretation hardening
+
+- Source text is mechanically segmented into source-order clause candidates without rewriting or
+  adding facts; the original page/section text remains the authoritative model input.
+- Qualification identifiers use conservative canonical procurement-code identity, so descriptive
+  prefixes such as a registry/workhead label do not break exact evidence binding.
+- Required-document binding distinguishes an attachment artifact from the Price/Technical envelope
+  used as its submission channel.
+- A validated compulsory deadline amendment receives a deterministic `PROCESSING_WINDOW` adapter
+  after model validation. The envelope/report labels it `DEADLINE_TO_PROCESSING_WINDOW`; the LLM
+  still cannot set feasibility or recoverability.
+- Missing typed rules, missing authoritative facts, and unused fact sets remain fail-closed. The
+  remaining Case 3 mismatch demonstrates that safeguard rather than hiding it.
+- Blind-v2 intake and an empty-set guard are ready; no unseen data or answer key was fabricated.
+
 ## AWS hackathon access preparation
 
 - The single Hackathon 2026 lease is active. STS identity succeeded with the temporary sandbox
@@ -149,8 +174,12 @@ workflow produced `FEASIBLE -> RECOVERABLE` and `8/8 -> 7/8`.
   incomplete credential sets fail closed.
 - Temporary credential wiring is covered by tests without exposing secret values.
 - Model discovery found Nova Micro and Nova Lite as active on-demand foundation models, plus active
-  system inference profiles for Nova and Claude Haiku variants. No provisioned throughput or
+  system inference profiles for Nova 2 Lite and Claude Haiku variants. No provisioned throughput or
   infrastructure was created.
+- A fixed-prompt known-regression bake-off compared Nova Lite v1, Nova Micro v1, and the US Nova 2
+  Lite system inference profile. Nova Lite won with 6/7 requirement interpretations, 2/2
+  corrigendum matches, 9/9 ambiguity decisions, and 8/9 final states. Nova Micro scored 4/7, 2/2,
+  8/9, and 6/9; Nova 2 Lite scored 3/7, 2/2, 7/9, and 6/9. All three had zero unsafe-green errors.
 - Native JSON-schema output was attempted with
   `us.anthropic.claude-haiku-4-5-20251001-v1:0`, but AWS rejected Converse while the new account's
   sandbox role lacked the required `aws-marketplace:ViewSubscriptions` and
@@ -162,7 +191,8 @@ workflow produced `FEASIBLE -> RECOVERABLE` and `8/8 -> 7/8`.
 - The minimal live requirement smoke test passed as `DOCUMENT / MANDATORY / INTERPRETED` with
   validated source provenance.
 - The browser was observed changing from **Interpretation: Demo fallback** before the invocation
-  to **Interpretation: Bedrock** only after the live R17 interpretation was persisted.
+  to **Interpretation: Bedrock** only after the live R17 interpretation was persisted, then back to
+  the canonical fallback label after an actual UI reset.
 
 ## Visual QA
 
@@ -327,9 +357,10 @@ reported zero unsafe-green errors; no score was manufactured.
   lacks the Marketplace subscription actions required to enable that model. Nova Lite v1 works
   through prompted JSON plus local validation.
 - No authorized Groq API key/model is configured.
-- Nova Lite exact requirement interpretation remains limited at 4/7 on known regression and 2/8
-  on the frozen blind set. Human review remains mandatory; no prompt tuning was performed against
-  the blind answer key.
+- Nova Lite exact requirement interpretation remains imperfect at 6/7 on known regression. The
+  historical blind-v1 first run remains 2/8 and was not used for this round's prompt/model
+  selection or rerun afterward. Human review and a genuinely sealed blind-v2 evaluation remain
+  mandatory.
 - PDF upload/OCR and multi-user production hardening are intentionally outside the frozen MVP.
 
 ## Final readiness classification

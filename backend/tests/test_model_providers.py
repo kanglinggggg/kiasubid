@@ -26,7 +26,12 @@ class FakeGroqResponse:
 
     def json(self) -> dict[str, Any]:
         return {
-            "choices": [{"message": {"content": json.dumps(self._content)}}]
+            "choices": [{"message": {"content": json.dumps(self._content)}}],
+            "usage": {
+                "prompt_tokens": 101,
+                "completion_tokens": 29,
+                "total_tokens": 130,
+            },
         }
 
 
@@ -112,7 +117,10 @@ def test_bedrock_prompt_validated_mode_supplies_schema_without_output_config():
     class FakeRuntime:
         def converse(self, **request: Any) -> dict[str, Any]:
             captured.update(request)
-            return {"output": {"message": {"content": [{"text": '{"value": "ok"}'}]}}}
+            return {
+                "output": {"message": {"content": [{"text": '{"value": "ok"}'}]}},
+                "usage": {"inputTokens": 42, "outputTokens": 7, "totalTokens": 49},
+            }
 
     app_settings = Settings(
         bedrock_model_id="amazon.nova-lite-v1:0",
@@ -137,6 +145,9 @@ def test_bedrock_prompt_validated_mode_supplies_schema_without_output_config():
     message = captured["messages"][0]["content"][0]["text"]
     assert "OUTPUT JSON SCHEMA (smoke)" in message
     assert '"required": ["value"]' in message
+    assert client.last_invocation.input_tokens == 42
+    assert client.last_invocation.output_tokens == 7
+    assert client.last_invocation.total_tokens == 49
 
 
 def test_groq_model_environment_alias_is_supported():
@@ -206,6 +217,9 @@ def test_groq_structured_request_and_live_mode_are_truthfully_reported(monkeypat
     assert captured["json"]["response_format"]["type"] == "json_schema"
     assert captured["json"]["temperature"] == 1e-8
     assert captured["headers"]["Authorization"] == "Bearer configured-test-key"
+    assert result.input_tokens == 101
+    assert result.output_tokens == 29
+    assert result.total_tokens == 130
 
 
 def test_prompt_explicitly_treats_document_instructions_as_untrusted_data():

@@ -1,5 +1,7 @@
 import json
 from collections.abc import Mapping
+from dataclasses import dataclass
+from time import perf_counter
 from typing import Any, Protocol
 
 import httpx
@@ -17,6 +19,14 @@ class BedrockUnavailable(ModelUnavailable):
 
 class GroqUnavailable(ModelUnavailable):
     pass
+
+
+@dataclass(frozen=True)
+class InvocationMetrics:
+    duration_ms: float
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    total_tokens: int | None = None
 
 
 class JsonModelClient(Protocol):
@@ -64,6 +74,7 @@ class BedrockConverseClient:
         self.model_id = app_settings.bedrock_model_id
         self._settings = app_settings
         self._client: Any | None = None
+        self.last_invocation: InvocationMetrics | None = None
 
     def _runtime(self) -> Any:
         if self._client is not None:
@@ -110,6 +121,7 @@ class BedrockConverseClient:
     def generate_json(
         self, *, system: str, prompt: str, schema: dict[str, Any], schema_name: str
     ) -> str:
+        started = perf_counter()
         effective_prompt = prompt
         if not self._settings.bedrock_structured_output:
             effective_prompt = (
@@ -141,10 +153,23 @@ class BedrockConverseClient:
             text_blocks = [block["text"] for block in blocks if "text" in block]
             if not text_blocks:
                 raise BedrockUnavailable("Bedrock returned no text content")
+            usage = response.get("usage", {})
+            self.last_invocation = InvocationMetrics(
+                duration_ms=round((perf_counter() - started) * 1000, 2),
+                input_tokens=usage.get("inputTokens"),
+                output_tokens=usage.get("outputTokens"),
+                total_tokens=usage.get("totalTokens"),
+            )
             return "".join(text_blocks)
         except BedrockUnavailable:
+            self.last_invocation = InvocationMetrics(
+                duration_ms=round((perf_counter() - started) * 1000, 2)
+            )
             raise
         except Exception as exc:
+            self.last_invocation = InvocationMetrics(
+                duration_ms=round((perf_counter() - started) * 1000, 2)
+            )
             raise BedrockUnavailable(f"Bedrock Converse failed: {exc}") from exc
 
 
@@ -159,10 +184,12 @@ class GroqChatClient:
             )
         self.model_id = model_id
         self._settings = app_settings
+        self.last_invocation: InvocationMetrics | None = None
 
     def generate_json(
         self, *, system: str, prompt: str, schema: dict[str, Any], schema_name: str
     ) -> str:
+        started = perf_counter()
         api_key = self._settings.groq_api_key
         if api_key is None:
             raise GroqUnavailable("GROQ_API_KEY is not configured")
@@ -206,10 +233,23 @@ class GroqChatClient:
             content = message.get("content")
             if not isinstance(content, str) or not content.strip():
                 raise GroqUnavailable("Groq returned no text content")
+            usage = payload.get("usage", {})
+            self.last_invocation = InvocationMetrics(
+                duration_ms=round((perf_counter() - started) * 1000, 2),
+                input_tokens=usage.get("prompt_tokens"),
+                output_tokens=usage.get("completion_tokens"),
+                total_tokens=usage.get("total_tokens"),
+            )
             return content
         except GroqUnavailable:
+            self.last_invocation = InvocationMetrics(
+                duration_ms=round((perf_counter() - started) * 1000, 2)
+            )
             raise
         except httpx.HTTPStatusError as exc:
+            self.last_invocation = InvocationMetrics(
+                duration_ms=round((perf_counter() - started) * 1000, 2)
+            )
             try:
                 error = exc.response.json().get("error", {}).get("message")
             except (AttributeError, TypeError, ValueError):
@@ -219,6 +259,9 @@ class GroqChatClient:
                 f"Groq request failed with HTTP {exc.response.status_code}: {detail}"
             ) from exc
         except (httpx.HTTPError, TypeError, ValueError) as exc:
+            self.last_invocation = InvocationMetrics(
+                duration_ms=round((perf_counter() - started) * 1000, 2)
+            )
             raise GroqUnavailable(f"Groq request failed: {exc}") from exc
 
 

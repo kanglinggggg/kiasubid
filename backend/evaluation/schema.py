@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
 from app.llm.schemas import (
     ChangeInterpretationRequest,
@@ -71,6 +71,45 @@ class CaseFailure(StrictModel):
     detail: str
 
 
+class FieldDifference(StrictModel):
+    field: str
+    expected: Any
+    actual: Any
+
+
+class RuleBindingDiagnostic(StrictModel):
+    requirement_stable_key: str | None
+    rule_kind: str | None
+    fact_kind: str | None
+    binding_status: Literal["MATCHED", "MISSING_RULE", "MISSING_FACT", "UNUSED_FACT"]
+    evaluation_status: str | None = None
+    recoverable: bool | None = None
+    reason: str | None = None
+
+
+class CaseDiagnostics(StrictModel):
+    attempts: int = 0
+    duration_ms: float = 0
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    total_tokens: int | None = None
+    deterministic_adapters: list[str] = Field(default_factory=list)
+    candidate_count: int = 0
+    selected_stable_key: str | None = None
+    actual_requirement_type: RequirementType | None = None
+    actual_gate_type: GateType | None = None
+    actual_structured_fields: dict[str, Any] = Field(default_factory=dict)
+    actual_procurement_rule: dict[str, Any] | None = None
+    actual_interpretation_status: InterpretationStatus | None = None
+    actual_affected_requirement: str | None = None
+    actual_change_type: ChangeType | None = None
+    actual_changed_fields: dict[str, Any] = Field(default_factory=dict)
+    source_provenance_match: bool | None = None
+    field_differences: list[FieldDifference] = Field(default_factory=list)
+    rule_bindings: list[RuleBindingDiagnostic] = Field(default_factory=list)
+    deterministic_reason: str | None = None
+
+
 class CaseResult(StrictModel):
     id: str
     partition: Literal["DEVELOPMENT", "REGRESSION", "BLIND"]
@@ -83,6 +122,7 @@ class CaseResult(StrictModel):
     unsafe_green_error: bool
     blocker: str | None = None
     failures: list[CaseFailure]
+    diagnostics: CaseDiagnostics = Field(default_factory=CaseDiagnostics)
 
 
 class AccuracyMetric(StrictModel):

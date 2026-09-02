@@ -1,4 +1,5 @@
 import json
+import re
 
 from app.llm.schemas import (
     ChangeInterpretationRequest,
@@ -20,6 +21,18 @@ stated facts in structured_fields using concise snake_case names; never infer th
 obligation fits the supplied procurement_rule schema, map it to the matching generic rule type. Do
 not invent rule fields that the source does not establish. Do not assess evidence, feasibility,
 recoverability, task priority, deadline risk, or supplier compliance."""
+
+
+def source_clause_candidates(text: str) -> list[str]:
+    """Mechanically expose source-order clauses without adding semantic claims."""
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n").strip()
+    if not normalized:
+        return []
+    return [
+        clause.strip()
+        for clause in re.split(r"(?<=[.;!?])\s+|\n+", normalized)
+        if clause.strip()
+    ]
 
 RULE_VOCABULARY_GUIDE = """Use this canonical mapping whenever the source supports a typed rule:
 - EVENT_ATTENDANCE -> requirement_type ELIGIBILITY. Use for briefings, site visits, showrounds,
@@ -48,6 +61,8 @@ as QUALIFICATION are never requirement_type values."""
 
 
 def requirement_prompt(payload: RequirementInterpretationRequest) -> str:
+    clauses = source_clause_candidates(payload.text)
+    clause_text = "\n".join(f"{index}. {clause}" for index, clause in enumerate(clauses, 1))
     return f"""Interpret the tender page/section below as zero or more requirements.
 The source fields in every requirement must reproduce the supplied document, page, and section.
 Each source snippet must be an exact contiguous quote from SOURCE TEXT.
@@ -56,6 +71,9 @@ Each source snippet must be an exact contiguous quote from SOURCE TEXT.
 
 INPUT:
 {json.dumps(payload.model_dump(mode="json"), ensure_ascii=False)}
+
+MECHANICALLY SEGMENTED SOURCE CLAUSE CANDIDATES (untrusted, source order):
+{clause_text}
 """
 
 

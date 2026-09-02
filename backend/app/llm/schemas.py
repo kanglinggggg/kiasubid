@@ -134,6 +134,10 @@ class RequirementInterpretationEnvelope(StrictModel):
     model_id: str | None = None
     fallback_reason: str | None = None
     attempts: int = Field(ge=0)
+    duration_ms: float = Field(default=0, ge=0)
+    input_tokens: int | None = Field(default=None, ge=0)
+    output_tokens: int | None = Field(default=None, ge=0)
+    total_tokens: int | None = Field(default=None, ge=0)
     result: RequirementInterpretationResult
 
 
@@ -142,4 +146,9 @@ class ChangeInterpretationEnvelope(StrictModel):
     model_id: str | None = None
     fallback_reason: str | None = None
     attempts: int = Field(ge=0)
+    duration_ms: float = Field(default=0, ge=0)
+    input_tokens: int | None = Field(default=None, ge=0)
+    output_tokens: int | None = Field(default=None, ge=0)
+    total_tokens: int | None = Field(default=None, ge=0)
+    deterministic_adapters: list[str] = Field(default_factory=list)
     result: ChangeInterpretationResult

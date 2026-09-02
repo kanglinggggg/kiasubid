@@ -7,6 +7,7 @@ from app.database import SessionLocal
 from app.demo.seed import DEMO_BID_ID
 from app.graph.workflow import CORRIGENDUM_TEXT, apply_corrigendum
 from app.llm.interpreter import InterpretationFailure, TenderInterpreter
+from app.llm.prompts import source_clause_candidates
 from app.llm.schemas import (
     ChangeInterpretationRequest,
     RequirementInterpretationRequest,
@@ -234,7 +235,7 @@ def test_generic_qualification_alias_is_canonicalized_without_case_specific_logi
                 "compulsory": True,
                 "procurement_rule": {
                     "kind": "QUALIFICATION",
-                    "options": [{"code": "CR11", "minimum_grade": "L2"}],
+                    "options": [{"code": "BCA workhead CR11", "minimum_grade": "L2"}],
                     "match": "ANY",
                     "compulsory": True,
                 },
@@ -267,6 +268,68 @@ def test_generic_qualification_alias_is_canonicalized_without_case_specific_logi
     assert requirement.gate_type == "MANDATORY"
     assert fields["registration_code"] == "CR11"
     assert fields["minimum_financial_grade"] == "L2"
+
+
+def test_source_clause_candidates_preserve_source_order_without_semantic_rewrite():
+    text = "First obligation applies. Second obligation applies; third remains unclear."
+    assert source_clause_candidates(text) == [
+        "First obligation applies.",
+        "Second obligation applies;",
+        "third remains unclear.",
+    ]
+
+
+def test_submission_channel_wording_is_canonicalized_to_required_artifacts():
+    text = (
+        "It is mandatory to upload at least one attachment in the Price envelope and at least "
+        "one attachment in the Technical envelope."
+    )
+    output = {
+        "requirements": [
+            {
+                "stable_key": None,
+                "text": text,
+                "requirement_type": "DOCUMENT",
+                "gate_type": "MANDATORY",
+                "deadline": None,
+                "minimum_count": None,
+                "certification": None,
+                "compulsory": True,
+                "procurement_rule": {
+                    "kind": "REQUIRED_DOCUMENT",
+                    "documents": ["Price envelope", "Technical envelope"],
+                    "match": "ALL",
+                    "compulsory": True,
+                },
+                "structured_fields": [],
+                "interpretation_status": "INTERPRETED",
+                "uncertainty_reason": None,
+                "source": {
+                    "document": "source.pdf",
+                    "page": 3,
+                    "section": "Submission",
+                    "snippet": text,
+                },
+            }
+        ]
+    }
+    result = TenderInterpreter(FakeBedrockClient([output]), _settings()).interpret_requirements(
+        RequirementInterpretationRequest(
+            document_name="source.pdf",
+            page=3,
+            section="Submission",
+            text=text,
+        ),
+        allow_fallback=False,
+    )
+    requirement = result.result.requirements[0]
+    fields = {item.name: item.value for item in requirement.structured_fields}
+    assert requirement.procurement_rule.documents == [
+        "Price attachment",
+        "Technical attachment",
+    ]
+    assert fields["price_attachment_required"] is True
+    assert fields["technical_attachment_required"] is True
 
 
 def test_processing_duration_without_source_deadline_is_preserved_without_invention():

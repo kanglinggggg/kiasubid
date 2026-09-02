@@ -117,8 +117,8 @@ No. The canonical synthetic fixture is a clearly labelled **Interpretation: Demo
 the deterministic product story remains reliable offline. With the active sandbox, Nova Lite has
 also completed the live R17 path; the UI changed to **Interpretation: Bedrock** only after that
 result was persisted. The post-hardening known regression remains mixed: exact requirement
-interpretation passed 4/7, corrigendum matching passed 2/2, ambiguity handling passed 9/9, and
-final operational state passed 6/9. The frozen blind set scored 2/8, not applicable, 7/8, and 4/8
+interpretation passed 6/7, corrigendum matching passed 2/2, ambiguity handling passed 9/9, and
+final operational state passed 8/9. The frozen blind-v1 set scored 2/8, not applicable, 7/8, and 4/8
 respectively, with zero unsafe-green errors.
 
 ## What evidence do you have today?
@@ -129,23 +129,25 @@ respectively, with zero unsafe-green errors.
 - mocked Bedrock/Groq boundaries, malformed-output, provenance, ambiguity, injection, semantic
   isolation, duplicate, and R17 end-to-end tests;
 - a real Nova Lite Bedrock smoke test and live R17 `FEASIBLE → RECOVERABLE` transition;
-- a live post-hardening known regression of 4/7 requirement interpretation, 2/2 corrigendum
-  matching, 9/9 ambiguity handling, and 6/9 final state, with every failure retained;
+- a live final known regression of 6/7 requirement interpretation, 2/2 corrigendum matching,
+  9/9 ambiguity handling, and 8/9 final state, with every failure retained;
 - a frozen eight-case blind result of 2/8 requirement interpretation, 7/8 ambiguity handling, and
   4/8 final state, with zero unsafe-green errors;
 - saved desktop and mobile QA screenshots and three repeatable canonical demo runs.
 
 The nine regression cases informed development and are not presented as unseen model accuracy.
-The separate U1-U8 blind cases were frozen before their first successful model run and were not
-used to tune production prompts after scoring.
+The separate U1-U8 blind-v1 cases were frozen before their first successful model run. They were
+not used to select this round's prompt, normalizers, or model, and were not rerun after those
+known-regression-driven changes. A separate empty blind-v2 intake is ready for the next teammate-
+sealed evaluation.
 
 ## What are the current limitations?
 
 - Nova Lite v1 does not support Bedrock-native `outputConfig`; it uses prompted JSON followed by
   strict Pydantic and provenance validation. Claude Haiku 4.5 native structured output remains
   blocked because the sandbox role lacks the required AWS Marketplace subscription actions.
-- Exact requirement interpretation remains the main limitation: 4/7 on known regression and 2/8
-  on the frozen blind set. Corrigendum matching, ambiguity safety, zero unsafe-green outcomes, and
+- Exact requirement interpretation remains the main limitation: 6/7 on known regression and 2/8
+  on the historical frozen blind-v1 run. Corrigendum matching, ambiguity safety, zero unsafe-green outcomes, and
   the R17 hero path are the stronger live results.
 - The demo uses synthetic tender, company, evidence, and personnel data.
 - Input is extracted page/section text; PDF upload, OCR, and live GeBIZ retrieval are outside scope.
