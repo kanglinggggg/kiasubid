@@ -2,15 +2,18 @@
 param(
     [string]$Voice = "Microsoft Hazel Desktop",
     [int]$VoiceRate = 1,
-    [string]$AppUrl = "http://127.0.0.1:5173/"
+    [string]$AppUrl = "http://127.0.0.1:5173/",
+    [string]$SceneFile = "docs\video\demo-scenes.json",
+    [string]$OutputName = "gebiz-bidops-demo-draft.mp4",
+    [switch]$NoNarration
 )
 
 $ErrorActionPreference = "Stop"
 $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-$sceneFile = Join-Path $projectRoot "docs\video\demo-scenes.json"
+$sceneFile = Join-Path $projectRoot $SceneFile
 $outputDir = Join-Path $projectRoot "output\demo-video"
 $workDir = Join-Path $outputDir "work"
-$finalVideo = Join-Path $outputDir "gebiz-bidops-demo-draft.mp4"
+$finalVideo = Join-Path $outputDir $OutputName
 $thumbnail = Join-Path $outputDir "gebiz-bidops-demo-thumbnail.png"
 
 New-Item -ItemType Directory -Force -Path $workDir | Out-Null
@@ -91,47 +94,49 @@ try {
 }
 '@ | Set-Content -LiteralPath $ttsScript -Encoding UTF8
 
-$paddedFiles = @()
-for ($index = 0; $index -lt $scenes.Count; $index += 1) {
-    $number = ($index + 1).ToString("00")
-    $rawAudio = Join-Path $workDir "scene-$number-raw.wav"
-    $paddedAudio = Join-Path $workDir "scene-$number.wav"
-    $durationSeconds = [math]::Round([double]$scenes[$index].duration_ms / 1000, 3)
+if (-not $NoNarration) {
+    $paddedFiles = @()
+    for ($index = 0; $index -lt $scenes.Count; $index += 1) {
+        $number = ($index + 1).ToString("00")
+        $rawAudio = Join-Path $workDir "scene-$number-raw.wav"
+        $paddedAudio = Join-Path $workDir "scene-$number.wav"
+        $durationSeconds = [math]::Round([double]$scenes[$index].duration_ms / 1000, 3)
 
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $ttsScript `
-        -OutputPath $rawAudio `
-        -Text ([string]$scenes[$index].narration) `
-        -Voice $Voice `
-        -Rate $VoiceRate
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $ttsScript `
+            -OutputPath $rawAudio `
+            -Text ([string]$scenes[$index].narration) `
+            -Voice $Voice `
+            -Rate $VoiceRate
+        if ($LASTEXITCODE -ne 0) {
+            throw "Narration synthesis failed for scene $number."
+        }
+
+        $spokenSeconds = [double](& $ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 $rawAudio)
+        if ($spokenSeconds -gt $durationSeconds) {
+            throw "Narration for scene $number is $([math]::Round($spokenSeconds, 2))s but the scene is ${durationSeconds}s. Increase the scene duration or shorten the narration."
+        }
+
+        & $ffmpeg -hide_banner -loglevel error -y `
+            -i $rawAudio `
+            -af "apad=whole_dur=$durationSeconds" `
+            -t $durationSeconds `
+            -ar 48000 -ac 2 -c:a pcm_s16le $paddedAudio
+        if ($LASTEXITCODE -ne 0) {
+            throw "Audio padding failed for scene $number."
+        }
+        $paddedFiles += $paddedAudio
+    }
+
+    $concatFile = Join-Path $workDir "narration-concat.txt"
+    $concatLines = $paddedFiles | ForEach-Object {
+        "file '" + ($_.Replace("\", "/").Replace("'", "'\''")) + "'"
+    }
+    $concatLines | Set-Content -LiteralPath $concatFile -Encoding ascii
+    $narration = Join-Path $workDir "narration.wav"
+    & $ffmpeg -hide_banner -loglevel error -y -f concat -safe 0 -i $concatFile -c copy $narration
     if ($LASTEXITCODE -ne 0) {
-        throw "Narration synthesis failed for scene $number."
+        throw "Narration assembly failed."
     }
-
-    $spokenSeconds = [double](& $ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 $rawAudio)
-    if ($spokenSeconds -gt $durationSeconds) {
-        throw "Narration for scene $number is $([math]::Round($spokenSeconds, 2))s but the scene is ${durationSeconds}s. Increase the scene duration or shorten the narration."
-    }
-
-    & $ffmpeg -hide_banner -loglevel error -y `
-        -i $rawAudio `
-        -af "apad=whole_dur=$durationSeconds" `
-        -t $durationSeconds `
-        -ar 48000 -ac 2 -c:a pcm_s16le $paddedAudio
-    if ($LASTEXITCODE -ne 0) {
-        throw "Audio padding failed for scene $number."
-    }
-    $paddedFiles += $paddedAudio
-}
-
-$concatFile = Join-Path $workDir "narration-concat.txt"
-$concatLines = $paddedFiles | ForEach-Object {
-    "file '" + ($_.Replace("\", "/").Replace("'", "'\''")) + "'"
-}
-$concatLines | Set-Content -LiteralPath $concatFile -Encoding ascii
-$narration = Join-Path $workDir "narration.wav"
-& $ffmpeg -hide_banner -loglevel error -y -f concat -safe 0 -i $concatFile -c copy $narration
-if ($LASTEXITCODE -ne 0) {
-    throw "Narration assembly failed."
 }
 
 $env:PLAYWRIGHT_PACKAGE_DIR = $playwrightPackage
@@ -145,13 +150,21 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 $capture = Join-Path $workDir "bidops-demo-capture.webm"
-& $ffmpeg -hide_banner -loglevel error -y `
-    -i $capture -i $narration `
-    -map 0:v:0 -map 1:a:0 `
-    -vf "scale=1280:720:flags=lanczos,format=yuv420p" `
-    -c:v libx264 -preset medium -crf 20 `
-    -c:a aac -b:a 160k -af apad -shortest `
-    -movflags +faststart $finalVideo
+if ($NoNarration) {
+    & $ffmpeg -hide_banner -loglevel error -y `
+        -i $capture -map 0:v:0 -an `
+        -vf "scale=1280:720:flags=lanczos,format=yuv420p" `
+        -c:v libx264 -preset medium -crf 20 `
+        -movflags +faststart $finalVideo
+} else {
+    & $ffmpeg -hide_banner -loglevel error -y `
+        -i $capture -i $narration `
+        -map 0:v:0 -map 1:a:0 `
+        -vf "scale=1280:720:flags=lanczos,format=yuv420p" `
+        -c:v libx264 -preset medium -crf 20 `
+        -c:a aac -b:a 160k -af apad -shortest `
+        -movflags +faststart $finalVideo
+}
 if ($LASTEXITCODE -ne 0) {
     throw "Final MP4 encoding failed."
 }

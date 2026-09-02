@@ -8,7 +8,6 @@ import {
   Check,
   CheckCircle2,
   CircleDot,
-  ClipboardCheck,
   Clock3,
   Database,
   FileDiff,
@@ -174,18 +173,6 @@ function App() {
     }
   }
 
-  async function approvePackage() {
-    setMutating(true);
-    setError(null);
-    try {
-      setData(await bidApi.approve());
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Unable to record approval.");
-    } finally {
-      setMutating(false);
-    }
-  }
-
   if (loading) {
     return (
       <main className="loading-screen">
@@ -193,7 +180,7 @@ function App() {
           <Shield size={25} />
         </div>
         <strong>GeBIZ BidOps</strong>
-        <span>Loading trustworthy bid state</span>
+        <span>Loading bid state</span>
         <LoaderCircle className="spin" size={20} />
       </main>
     );
@@ -632,35 +619,6 @@ function App() {
           {selected && <RequirementDetail requirement={selected} />}
         </section>
 
-        <section className={`human-review ${data.human_review.approved ? "approved" : ""}`}>
-          <div className="human-icon">
-            {data.human_review.approved ? <CheckCircle2 size={23} /> : <UserRoundCheck size={23} />}
-          </div>
-          <div className="human-copy">
-            <span className="eyebrow">Internal decision</span>
-            <h2>
-              {data.human_review.approved
-                ? `Internal package approved by ${data.human_review.approved_by}`
-                : "Checks complete. Your team makes the final call."}
-            </h2>
-            <p>{data.disclaimer}</p>
-          </div>
-          <button
-            className="approval-button"
-            disabled={
-              metrics.operational_status !== "FEASIBLE" || data.human_review.approved || mutating
-            }
-            onClick={approvePackage}
-          >
-            {data.human_review.approved ? <Check size={16} /> : <ClipboardCheck size={16} />}
-            {data.human_review.approved ? "Approval recorded" : "Approve Internal Bid Package"}
-          </button>
-          {metrics.operational_status !== "FEASIBLE" && (
-            <small className="approval-lock">
-              <LockKeyhole size={12} /> Resolve the mandatory gate before approval
-            </small>
-          )}
-        </section>
       </main>
 
       <footer className="app-footer">
@@ -668,7 +626,6 @@ function App() {
           <span>
             <Shield size={14} /> GeBIZ BidOps
           </span>
-          <p>Bedrock interprets clauses. BidOps applies evidence, gate, recovery, and deadline rules.</p>
           <button onClick={() => setActivityOpen(true)}>
             <History size={14} /> View audit activity
           </button>

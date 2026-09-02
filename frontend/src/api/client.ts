@@ -26,12 +26,4 @@ export const bidApi = {
     }),
   completeTask: (taskId: string) =>
     request<BidState>(`/api/tasks/${taskId}/complete`, { method: "POST" }),
-  approve: () =>
-    request<BidState>(`/api/bids/${DEMO_BID_ID}/human-approve`, {
-      method: "POST",
-      body: JSON.stringify({
-        approved_by: "Demo Reviewer",
-        note: "Internal package reviewed during the hackathon demonstration.",
-      }),
-    }),
 };

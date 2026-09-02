@@ -1,0 +1,74 @@
+[
+  {
+    "id": "title",
+    "duration_ms": 7000,
+    "title": "What is GeBIZ BidOps?",
+    "caption": "BidOps helps suppliers check whether a tender is still ready to bid — and what to fix when the requirements change."
+  },
+  {
+    "id": "control_room",
+    "duration_ms": 8000,
+    "title": "One place to control bid readiness",
+    "caption": "It connects tender requirements, company evidence, mandatory gates, preparation tasks and deadlines."
+  },
+  {
+    "id": "initial_metrics",
+    "duration_ms": 7000,
+    "title": "The bid starts FEASIBLE",
+    "caption": "All 8 mandatory gates are verified. The submission package is 91% prepared and deadline risk is LOW."
+  },
+  {
+    "id": "r17_source",
+    "duration_ms": 9000,
+    "title": "Every requirement is traceable",
+    "caption": "R17 requires at least 3 CISSP-certified engineers. Its source clause and supporting staff evidence are linked here."
+  },
+  {
+    "id": "corrigendum_intro",
+    "duration_ms": 7000,
+    "title": "Then the buyer issues a corrigendum",
+    "caption": "The mandatory manpower requirement changes from 3 CISSP engineers to 4."
+  },
+  {
+    "id": "workflow",
+    "duration_ms": 10000,
+    "title": "BidOps traces the impact",
+    "caption": "It matches the change to R17, creates version 2, supersedes the old assessment and rechecks company evidence."
+  },
+  {
+    "id": "recoverable_metrics",
+    "duration_ms": 8000,
+    "title": "The bid becomes RECOVERABLE",
+    "caption": "Only 3 complete evidence sets remain. The bid needs action, but it can still be recovered before closing."
+  },
+  {
+    "id": "candidate",
+    "duration_ms": 9000,
+    "title": "A possible employee is not enough",
+    "caption": "Engineer D has a verified CISSP, but the CV is stale and availability is unknown, so R17 cannot pass yet."
+  },
+  {
+    "id": "recovery_tasks",
+    "duration_ms": 10000,
+    "title": "The evidence gap becomes a work plan",
+    "caption": "Request the updated CV, confirm availability, revise the manpower schedule, then re-run R17 verification."
+  },
+  {
+    "id": "blocked",
+    "duration_ms": 7000,
+    "title": "Not every bid can be recovered",
+    "caption": "If a mandatory restriction has no credible recovery path, BidOps marks the bid BLOCKED."
+  },
+  {
+    "id": "uncertain",
+    "duration_ms": 7000,
+    "title": "Missing facts are never guessed",
+    "caption": "If official wording or evidence is insufficient, BidOps keeps the bid UNCERTAIN and requests clarification."
+  },
+  {
+    "id": "close",
+    "duration_ms": 6000,
+    "title": "Know what changed — and what to do next",
+    "caption": "Requirement → Evidence → Assessment → Change → Impact → Recovery Action"
+  }
+]
