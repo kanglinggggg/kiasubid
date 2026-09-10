@@ -94,6 +94,8 @@ def _assess_certified_staff(
     candidates: list[str] = []
     used_evidence: list[str] = []
     for employee in employees:
+        if employee.employment_status != "ACTIVE":
+            continue
         employee_evidence = by_employee.get(employee.id, [])
         valid_certificates = [
             item
@@ -113,7 +115,7 @@ def _assess_certified_staff(
         if current_cvs and employee.availability_status == AvailabilityStatus.AVAILABLE.value:
             usable.append(employee.id)
             used_evidence.extend([valid_certificates[0].id, current_cvs[0].id])
-        else:
+        elif employee.availability_status != AvailabilityStatus.UNAVAILABLE.value:
             candidates.append(employee.id)
 
     if len(usable) >= minimum_count:

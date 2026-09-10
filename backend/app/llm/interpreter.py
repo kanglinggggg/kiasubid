@@ -7,7 +7,11 @@ from typing import Any, TypeVar
 from pydantic import BaseModel, ValidationError
 
 from app.config import Settings, settings
-from app.llm.fallback import interpret_change_fallback, interpret_requirement_fallback
+from app.llm.fallback import (
+    contains_model_directive,
+    interpret_change_fallback,
+    interpret_requirement_fallback,
+)
 from app.llm.prompts import (
     SYSTEM_PROMPT,
     change_prompt,
@@ -424,6 +428,15 @@ class TenderInterpreter:
         *,
         allow_fallback: bool = True,
     ) -> ChangeInterpretationEnvelope:
+        if contains_model_directive(payload.text):
+            return ChangeInterpretationEnvelope(
+                mode="DEMO_FALLBACK",
+                fallback_reason=(
+                    "Model-directed source text was blocked before any provider invocation."
+                ),
+                attempts=0,
+                result=interpret_change_fallback(payload),
+            )
         if not payload.text.strip():
             return ChangeInterpretationEnvelope(
                 mode="DEMO_FALLBACK",

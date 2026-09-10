@@ -69,14 +69,14 @@ function slideMarkup(scene, index) {
   } else if (scene.id === "validation") {
     detail = `
       <div class="validation-grid">
-        <article><strong>64</strong><span>backend tests</span></article>
-        <article><strong>4</strong><span>frontend tests</span></article>
+        <article><strong>85</strong><span>backend tests</span></article>
+        <article><strong>10</strong><span>frontend tests</span></article>
         <article><strong>9 / 9</strong><span>deterministic benchmark</span></article>
         <article><strong>PASS</strong><span>live Bedrock R17 path</span></article>
       </div>
       <p class="caveat">Unseen extraction remains a measured limitation and requires human review.</p>`;
   } else if (scene.id === "close") {
-    detail = `<div class="closing-flow"><span>CHANGE</span><b>→</b><span>IMPACT</span><b>→</b><span>RECOVERY</span></div>`;
+    detail = `<div class="closing-flow"><span>CHANGE</span><b>→</b><span>RECOVERY</span><b>→</b><span>TRADE-OFF</span><b>→</b><span>HUMAN DECISION</span></div>`;
   }
 
   return `<!doctype html>
@@ -209,6 +209,32 @@ async function actionFor(scene, index) {
       break;
     case "impact_chain":
       await scrollToHeading("Impact Chain");
+      break;
+    case "portfolio_trigger":
+      await page.locator(".portfolio-impact-trigger").scrollIntoViewIfNeeded();
+      await page.waitForTimeout(500);
+      break;
+    case "portfolio_capacity":
+      await page.getByRole("button", { name: /Compare 3 routes/ }).click();
+      await page.getByRole("heading", { name: "Portfolio impact", exact: true }).waitFor({
+        state: "visible",
+        timeout: 15000,
+      });
+      break;
+    case "portfolio_routes": {
+      const routeHeading = page.getByRole("heading", { name: "Compare decision routes", exact: true });
+      await routeHeading.scrollIntoViewIfNeeded();
+      await page.getByRole("button", { name: /Protect this tender/ }).click();
+      await page.waitForTimeout(650);
+      await page.getByRole("button", { name: /Protect existing commitment/ }).click();
+      await page.waitForTimeout(650);
+      await page.getByRole("button", { name: /Verify external capacity/ }).click();
+      await page.waitForTimeout(650);
+      break;
+    }
+    case "portfolio_roadmap":
+      await page.getByRole("heading", { name: "Capability next steps", exact: true }).scrollIntoViewIfNeeded();
+      await page.waitForTimeout(500);
       break;
     case "blocked":
       await page.evaluate(() => window.scrollTo({ top: 0, behavior: "smooth" }));

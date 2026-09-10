@@ -75,6 +75,73 @@ export interface ActivityEvent {
   timestamp: string;
 }
 
+export type PortfolioAction = "RECOVER" | "WALK_AWAY" | "PARTNER";
+
+export interface PortfolioAffectedBid {
+  bid_id: string;
+  reference_number: string;
+  title: string;
+  relationship: "CURRENT" | "OTHER";
+  required_capacity: number;
+}
+
+export interface PortfolioRoute {
+  id: string;
+  action: PortfolioAction;
+  label: string;
+  rationale: string;
+  outcomes: Array<{
+    bid_id: string;
+    status: OperationalStatus;
+  }>;
+  unresolved_facts: string[];
+  requires_human_decision: boolean;
+}
+
+export interface PortfolioImpact {
+  mode: "SIMULATION_ONLY";
+  synthetic: boolean;
+  trigger: {
+    stable_key: string;
+    change_summary: string;
+  };
+  summary: string;
+  before_state: OperationalStatus;
+  after_state: OperationalStatus;
+  assumptions: string[];
+  capacity: {
+    capability: string;
+    unit: string;
+    proven_now: number;
+    potential_after_recovery: number;
+    concurrent_required: number;
+    shortfall: number;
+    window_start: string;
+    window_end: string;
+  };
+  affected_bids: PortfolioAffectedBid[];
+  routes: PortfolioRoute[];
+  capability_roadmap: Array<{
+    priority: number;
+    capability: string;
+    opportunity_ids: string[];
+    opportunities_affected: number;
+    requirement_count: number;
+    earliest_window_start: string;
+    sources: string[];
+    gap_type: "EVIDENCE_OR_AVAILABILITY" | "ADDITIONAL_CAPACITY_REQUIRED";
+    known_gap: number;
+    action: string;
+    effect: string;
+    basis: string;
+  }>;
+  calculation: {
+    rule: string;
+    precedence: OperationalStatus[];
+  };
+  calculated_at: string;
+}
+
 export interface BidState {
   bid: {
     id: string;
@@ -189,12 +256,17 @@ export interface BidState {
     title: string;
     summary: string;
     stable_key: string;
+    change_type?: "MODIFIED";
+    display_kind?: "COUNT" | "TEXT";
+    subject_label?: string;
     old: string;
     new: string;
-    old_count: number;
-    new_count: number;
+    old_count: number | null;
+    new_count: number | null;
     old_requirement_id: string;
     new_requirement_id: string;
+    old_version?: number;
+    new_version?: number;
     old_assessment: AssessmentStatus;
     new_assessment: AssessmentStatus;
     impact: {
@@ -209,12 +281,14 @@ export interface BidState {
     id: string;
     name: string;
     role: string;
+    certification_name?: string | null;
     certification: VerificationStatus;
     certification_valid_until: string | null;
     cv: VerificationStatus;
     availability: AvailabilityStatus;
     can_satisfy_now: boolean;
   };
+  portfolio_impact: PortfolioImpact | null;
   activity_events: ActivityEvent[];
   human_review: {
     required: boolean;

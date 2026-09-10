@@ -16,6 +16,7 @@ from app.models import (
     TaskDependency,
     Tender,
 )
+from app.portfolio.demo import build_demo_portfolio_impact
 from app.services.assessment import assess_requirement
 from app.services.deadline import deadline_risk_trace
 from app.services.metrics import (
@@ -151,6 +152,7 @@ def serialize_bid(session: Session, tender_id: str) -> dict:
     )
     change_payload = None
     recovery_candidate = None
+    portfolio_impact = None
     impact_chain = []
     if latest_change:
         changed_requirements = [
@@ -159,86 +161,181 @@ def serialize_bid(session: Session, tender_id: str) -> dict:
         ]
         changed_requirements = [item for item in changed_requirements if item is not None]
         changed_requirements.sort(key=lambda item: item.version)
-        previous_requirement = changed_requirements[0]
-        current_requirement = changed_requirements[-1]
-        previous_assessment = latest_assessment(session, previous_requirement.id)
-        current_assessment = latest_assessment(session, current_requirement.id)
-        recovery_task_models = [task for task in tasks if task.recovery_path]
-        affected_recovery_requirements = {
-            task.requirement_id for task in recovery_task_models if task.requirement_id
-        }
-        critical_gates_broken = int(
-            previous_assessment is not None
+        if len(changed_requirements) >= 2:
+            previous_requirement = changed_requirements[0]
+            current_requirement = changed_requirements[-1]
+            previous_assessment = latest_assessment(session, previous_requirement.id)
+            current_assessment = latest_assessment(session, current_requirement.id)
+            recovery_task_models = [
+                task
+                for task in tasks
+                if task.recovery_path and task.requirement_id == current_requirement.id
+            ]
+            affected_recovery_requirements = {
+                task.requirement_id for task in recovery_task_models if task.requirement_id
+            }
+            critical_gates_broken = int(
+                previous_assessment is not None
+                and previous_assessment.status == "SUPERSEDED"
+                and current_assessment is not None
+                and current_assessment.status != "SATISFIED"
+                and current_requirement.gate_type == "MANDATORY"
+            )
+            superseded_count = sum(
+                bool(assessment and assessment.status == "SUPERSEDED")
+                for requirement in changed_requirements[:-1]
+                if (assessment := latest_assessment(session, requirement.id)) is not None
+            )
+            result = assess_requirement(session, current_requirement)
+            old_count = previous_requirement.rule_config.get("minimum_count")
+            new_count = current_requirement.rule_config.get("minimum_count")
+            has_count_diff = isinstance(old_count, int) and isinstance(new_count, int)
+            is_generic = latest_change.event_type == "GENERIC_REQUIREMENT_MODIFIED"
+            change_title = (
+                f"Reviewed amendment · {current_requirement.source_document.filename}"
+                if is_generic
+                else f"Corrigendum #{current_requirement.source_document.version}"
+            )
+            change_payload = {
+                "id": latest_change.id,
+                "title": change_title,
+                "summary": latest_change.summary,
+                "stable_key": current_requirement.stable_key,
+                "change_type": "MODIFIED",
+                "display_kind": "COUNT" if has_count_diff else "TEXT",
+                "subject_label": (
+                    f"{current_requirement.rule_config.get('certification')}-certified personnel"
+                    if current_requirement.rule_config.get("certification")
+                    else "requirement wording"
+                ),
+                "old": previous_requirement.text,
+                "new": current_requirement.text,
+                "old_count": old_count,
+                "new_count": new_count,
+                "old_requirement_id": previous_requirement.id,
+                "new_requirement_id": current_requirement.id,
+                "old_version": previous_requirement.version,
+                "new_version": current_requirement.version,
+                "old_assessment": (
+                    previous_assessment.status if previous_assessment else "UNCERTAIN"
+                ),
+                "new_assessment": (
+                    current_assessment.status if current_assessment else "UNCERTAIN"
+                ),
+                "impact": {
+                    "critical_gates_broken": critical_gates_broken,
+                    "assessments_superseded": superseded_count,
+                    "recovery_paths_found": len(affected_recovery_requirements),
+                },
+                "detected_at": latest_change.detected_at,
+            }
+            if is_generic:
+                change_detail = (
+                    f"Minimum changed from {old_count} to {new_count}"
+                    if has_count_diff
+                    else "Tracked wording and structured fields were versioned"
+                )
+                impact_chain = [
+                    {"label": change_title, "detail": "Exact supplied source was confirmed"},
+                    {
+                        "label": f"{current_requirement.stable_key} v{current_requirement.version}",
+                        "detail": change_detail,
+                    },
+                    {
+                        "label": "Assessment recalculated",
+                        "detail": (
+                            f"{change_payload['old_assessment']} → "
+                            f"{change_payload['new_assessment']}"
+                        ),
+                    },
+                    {
+                        "label": "Recovery plan",
+                        "detail": f"{len(recovery_task_models)} dependent tasks created",
+                    },
+                    {
+                        "label": "Human checkpoint",
+                        "detail": "Final bid approval remains separate",
+                    },
+                ]
+            else:
+                impact_chain = [
+                    {"label": change_title, "detail": "Procurement language changed"},
+                    {
+                        "label": f"{current_requirement.stable_key} v{current_requirement.version}",
+                        "detail": f"Minimum increased from {old_count} to {new_count}",
+                    },
+                    {
+                        "label": "Assessment stale",
+                        "detail": (
+                            f"{previous_requirement.stable_key} v"
+                            f"{previous_requirement.version} superseded"
+                        ),
+                    },
+                    {
+                        "label": "Evidence shortfall",
+                        "detail": f"Only {len(result.usable_employee_ids)} complete personnel sets",
+                    },
+                    {
+                        "label": "Recovery actions",
+                        "detail": f"{len(recovery_task_models)} dependent tasks created",
+                    },
+                ]
+            employee = (
+                employees.get(result.recovery_candidate_ids[0])
+                if current_requirement.rule_config.get("kind") == "certified_staff"
+                and result.recovery_candidate_ids
+                else None
+            )
+            if employee:
+                candidate_evidence = evidence_by_subject[employee.id]
+                certificate = next(
+                    (
+                        item
+                        for item in candidate_evidence
+                        if item.type == "EMPLOYEE_CERTIFICATION"
+                    ),
+                    None,
+                )
+                cv = next((item for item in candidate_evidence if item.type == "CV"), None)
+                recovery_candidate = {
+                    "id": employee.id,
+                    "name": employee.name,
+                    "role": employee.role,
+                    "certification_name": current_requirement.rule_config.get("certification"),
+                    "certification": (
+                        certificate.verification_status if certificate else "MISSING"
+                    ),
+                    "certification_valid_until": (
+                        certificate.valid_until if certificate else None
+                    ),
+                    "cv": cv.verification_status if cv else "MISSING",
+                    "availability": employee.availability_status,
+                    "can_satisfy_now": employee.id in result.usable_employee_ids,
+                }
+        if len(changed_requirements) >= 2 and (
+            tender.id == "BID-DEMO-001"
+            and len(changed_requirements) == 2
+            and previous_requirement.stable_key == "R17"
+            and current_requirement.stable_key == "R17"
+            and previous_requirement.version == 1
+            and current_requirement.version == 2
+            and previous_requirement.rule_config.get("kind") == "certified_staff"
+            and current_requirement.rule_config.get("kind") == "certified_staff"
+            and old_count == 3
+            and current_requirement.rule_config.get("minimum_count") == 4
+            and previous_assessment is not None
             and previous_assessment.status == "SUPERSEDED"
             and current_assessment is not None
-            and current_assessment.status != "SATISFIED"
-            and current_requirement.gate_type == "MANDATORY"
-        )
-        superseded_count = sum(
-            bool(assessment and assessment.status == "SUPERSEDED")
-            for requirement in changed_requirements[:-1]
-            if (assessment := latest_assessment(session, requirement.id)) is not None
-        )
-        result = assess_requirement(session, current_requirement)
-        old_count = previous_requirement.rule_config.get("minimum_count")
-        new_count = current_requirement.rule_config.get("minimum_count")
-        change_payload = {
-            "id": latest_change.id,
-            "title": f"Corrigendum #{current_requirement.source_document.version}",
-            "summary": latest_change.summary,
-            "stable_key": current_requirement.stable_key,
-            "old": previous_requirement.text,
-            "new": current_requirement.text,
-            "old_count": old_count,
-            "new_count": new_count,
-            "old_requirement_id": previous_requirement.id,
-            "new_requirement_id": current_requirement.id,
-            "old_assessment": previous_assessment.status if previous_assessment else "UNCERTAIN",
-            "new_assessment": current_assessment.status if current_assessment else "UNCERTAIN",
-            "impact": {
-                "critical_gates_broken": critical_gates_broken,
-                "assessments_superseded": superseded_count,
-                "recovery_paths_found": len(affected_recovery_requirements),
-            },
-            "detected_at": latest_change.detected_at,
-        }
-        impact_chain = [
-            {"label": change_payload["title"], "detail": "Procurement language changed"},
-            {
-                "label": f"{current_requirement.stable_key} v{current_requirement.version}",
-                "detail": f"Minimum increased from {old_count} to {new_count}",
-            },
-            {"label": "Assessment stale", "detail": "R17 v1 superseded"},
-            {
-                "label": "Evidence shortfall",
-                "detail": f"Only {len(result.usable_employee_ids)} complete personnel sets",
-            },
-            {
-                "label": "Recovery actions",
-                "detail": f"{len(recovery_task_models)} dependent tasks created",
-            },
-        ]
-        employee = (
-            employees.get(result.recovery_candidate_ids[0])
-            if result.recovery_candidate_ids
-            else None
-        )
-        if employee:
-            candidate_evidence = evidence_by_subject[employee.id]
-            certificate = next(
-                (item for item in candidate_evidence if item.type == "EMPLOYEE_CERTIFICATION"), None
+            and current_assessment.status == "PARTIAL"
+            and result.status.value == "PARTIAL"
+            and len(result.usable_employee_ids) == 3
+            and result.recovery_candidate_ids == ["EMP-D"]
+        ):
+            portfolio_impact = build_demo_portfolio_impact(
+                tender,
+                current_requirement,
+                result,
             )
-            cv = next((item for item in candidate_evidence if item.type == "CV"), None)
-            recovery_candidate = {
-                "id": employee.id,
-                "name": employee.name,
-                "role": employee.role,
-                "certification": certificate.verification_status if certificate else "MISSING",
-                "certification_valid_until": certificate.valid_until if certificate else None,
-                "cv": cv.verification_status if cv else "MISSING",
-                "availability": employee.availability_status,
-                "can_satisfy_now": employee.id in result.usable_employee_ids,
-            }
 
     activities = session.scalars(
         select(ActivityEvent)
@@ -256,10 +353,22 @@ def serialize_bid(session: Session, tender_id: str) -> dict:
         }.get(latest_interpretation.actor, "DEMO_FALLBACK")
     else:
         interpretation_mode = "DEMO_FALLBACK"
-    approval = session.scalar(
-        select(HumanApproval)
-        .where(HumanApproval.tender_id == tender.id)
-        .order_by(HumanApproval.approved_at.desc())
+    invalidated_approval_ids = {
+        activity.entity_id
+        for activity in activities
+        if activity.event_type == "HUMAN_APPROVAL_INVALIDATED" and activity.entity_id
+    }
+    approval = next(
+        (
+            candidate
+            for candidate in session.scalars(
+                select(HumanApproval)
+                .where(HumanApproval.tender_id == tender.id)
+                .order_by(HumanApproval.approved_at.desc())
+            ).all()
+            if candidate.id not in invalidated_approval_ids
+        ),
+        None,
     )
     gates = critical_gate_trace(session, tender.id)
     coverage = submission_coverage_trace(session, tender)
@@ -344,6 +453,7 @@ def serialize_bid(session: Session, tender_id: str) -> dict:
         "latest_change": change_payload,
         "impact_chain": impact_chain,
         "recovery_candidate": recovery_candidate,
+        "portfolio_impact": portfolio_impact,
         "activity_events": [
             {
                 "id": activity.id,

@@ -1,6 +1,49 @@
-# Final pre-freeze validation report
+# Validation report
 
-Date: 2 September 2026 (Asia/Singapore)
+Latest extension pass: 8 September 2026 (Asia/Singapore)
+
+Original full pre-freeze pass: 2 September 2026 (Asia/Singapore)
+
+## Portfolio extension and bid-assessment hardening — 8 September 2026
+
+The portfolio-capability extension and stricter staff-assessment rules were validated from a clean
+local restart. Exactly one
+listener was present on each of ports 5173 and 8000; the frontend, `/api/health`, and API-backed
+demo flow returned successfully.
+
+Fresh results from the final tree:
+
+| Check | Result |
+|---|---:|
+| Ruff | PASS |
+| Backend pytest | 85 passed |
+| Portfolio backend regression | 19 passed as part of the backend suite |
+| Frontend Vitest | 10 passed in 3 files |
+| TypeScript (`tsc -b`) | PASS |
+| Vite production build | PASS; 1,675 modules transformed |
+| Deterministic procurement-rule benchmark | 9/9 requirement results; 9/9 bid states |
+
+The portfolio regression covers recoverable and hard capacity gaps, positive lower-bound handling
+and null exact totals for unknown mandatory counts, half-open adjacent windows, mixed timezone
+offsets, case-safe identifiers, strict input and typed output contracts, stable repeated output, a
+read-only simulation boundary, partner uncertainty, peak-scoped roadmap aggregation across tied
+windows, and the unchanged R17 hero states.
+
+Chromium browser checks then exercised the real FastAPI/Vite flow at 1440×900, 1280×720, and
+390×844:
+
+- reset to `FEASIBLE / 8 of 8 / 91% / LOW`;
+- apply Corrigendum #2 and retain `RECOVERABLE / 7 of 8 / 84% / MEDIUM` at bid level;
+- expose the synthetic portfolio transition `RECOVERABLE → BLOCKED` with counts `3 / 4 / 5 / 1`;
+- open all three route choices and verify that the partner route remains `UNCERTAIN`;
+- show two roadmap items and the assumptions/calculation trace;
+- keep keyboard focus inside the native modal, close with Escape, restore trigger focus and body
+  scrolling, and leave no horizontal overflow;
+- record zero page or console errors.
+
+The companion commitment, service windows, and capacity figures are synthetic. This result is a
+deterministic portfolio regression fixture, not an unseen-AI benchmark or a claim of live staff
+allocation, pricing, win prediction, or automatic bid action.
 
 ## Environment
 
@@ -56,11 +99,11 @@ Fresh results from the final tree:
 | Check | Result |
 |---|---:|
 | Ruff | PASS |
-| Backend pytest | 64 passed |
-| Frontend Vitest | 4 passed in 2 files |
+| Backend pytest | 85 passed |
+| Frontend Vitest | 10 passed in 3 files |
 | TypeScript (`tsc -b`) | PASS |
-| Vite production build | PASS; 1,674 modules transformed |
-| npm audit | 0 known vulnerabilities |
+| Vite production build | PASS; 1,675 modules transformed |
+| npm audit | 0 known vulnerabilities on 8 September 2026 |
 | Provider boundary tests | 20 passed as part of the backend suite |
 
 Pytest reports 42 third-party deprecation warnings from LangGraph/Starlette under Python 3.14; no

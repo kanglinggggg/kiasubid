@@ -18,31 +18,27 @@ import {
   ListChecks,
   LoaderCircle,
   LockKeyhole,
+  Network,
   RefreshCcw,
   RotateCcw,
+  ScanSearch,
   Shield,
   ShieldAlert,
   UserRoundCheck,
   Users,
   X,
-  Zap,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { bidApi } from "./api/client";
 import { ActivityDrawer } from "./components/ActivityDrawer";
+import { AmendmentReviewDrawer } from "./components/AmendmentReviewDrawer";
 import { MetricCard } from "./components/MetricCard";
+import { PortfolioSimulationDrawer } from "./components/PortfolioSimulationDrawer";
 import { RequirementDetail } from "./components/RequirementDetail";
 import { RequirementTable } from "./components/RequirementTable";
 import { StatusPill } from "./components/StatusPill";
+import { TenderLabDrawer } from "./components/TenderLabDrawer";
 import type { BidState, BidTask, DemoFixture, Requirement } from "./types/bid";
-
-const workflowStages = [
-  "Reading Corrigendum #2",
-  "Matching changed obligation",
-  "Versioning R17 and superseding prior assessment",
-  "Rechecking the Evidence Registry",
-  "Planning recovery actions and deadlines",
-];
 
 function parseUtc(value: string) {
   return new Date(value.endsWith("Z") ? value : `${value}Z`);
@@ -92,9 +88,10 @@ function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [mutating, setMutating] = useState(false);
-  const [workflowRunning, setWorkflowRunning] = useState(false);
-  const [workflowStage, setWorkflowStage] = useState(0);
   const [activityOpen, setActivityOpen] = useState(false);
+  const [portfolioOpen, setPortfolioOpen] = useState(false);
+  const [tenderLabOpen, setTenderLabOpen] = useState(false);
+  const [amendmentOpen, setAmendmentOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [changed, setChanged] = useState(false);
 
@@ -116,36 +113,11 @@ function App() {
     [data, selectedId],
   );
 
-  async function applyCorrigendum() {
-    setMutating(true);
-    setWorkflowRunning(true);
-    setWorkflowStage(0);
-    setError(null);
-    const timer = window.setInterval(
-      () => setWorkflowStage((stage) => Math.min(stage + 1, workflowStages.length - 1)),
-      360,
-    );
-    try {
-      const [result] = await Promise.all([
-        bidApi.applyCorrigendum(),
-        new Promise((resolve) => window.setTimeout(resolve, 1900)),
-      ]);
-      setData(result);
-      setSelectedId(preferredRequirement(result));
-      setChanged(true);
-      window.setTimeout(() => setChanged(false), 1900);
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "The corrigendum workflow failed.");
-    } finally {
-      window.clearInterval(timer);
-      setWorkflowRunning(false);
-      setMutating(false);
-    }
-  }
-
   async function resetDemo() {
     setMutating(true);
     setError(null);
+    setPortfolioOpen(false);
+    setAmendmentOpen(false);
     try {
       const result = await bidApi.reset();
       setData(result);
@@ -160,6 +132,8 @@ function App() {
   async function loadFixture(fixtureId: string) {
     setMutating(true);
     setError(null);
+    setPortfolioOpen(false);
+    setAmendmentOpen(false);
     try {
       const result = await bidApi.loadFixture(fixtureId);
       setData(result);
@@ -251,6 +225,9 @@ function App() {
               ))}
             </select>
           </label>
+          <button className="nav-button tender-lab-nav" onClick={() => setTenderLabOpen(true)}>
+            <ScanSearch size={16} /> Tender Lab
+          </button>
           <button className="nav-button" onClick={() => setActivityOpen(true)}>
             <Activity size={16} /> Activity
             <span>{data.activity_events.length}</span>
@@ -300,11 +277,15 @@ function App() {
                 <RefreshCcw size={15} />
               </button>
             ) : data.bid.fixture_id === "main-corrigendum" ? (
-              <button className="corrigendum-button" onClick={applyCorrigendum} disabled={mutating}>
-                <Zap size={18} fill="currentColor" />
+              <button
+                className="corrigendum-button"
+                onClick={() => setAmendmentOpen(true)}
+                disabled={mutating}
+              >
+                <FileDiff size={18} />
                 <span>
-                  Apply Corrigendum #2
-                  <small>Run impact workflow</small>
+                  Review Corrigendum #2
+                  <small>Preview impact before update</small>
                 </span>
                 <ArrowRight size={17} />
               </button>
@@ -492,18 +473,36 @@ function App() {
               <>
                 <div className="diff-grid">
                   <div className="diff-old">
-                    <span>Previous · {data.latest_change.stable_key} v1</span>
-                    <strong>{data.latest_change.old_count}</strong>
-                    <p>CISSP-certified engineers</p>
+                    <span>
+                      Previous · {data.latest_change.stable_key} v
+                      {data.latest_change.old_version ?? 1}
+                    </span>
+                    {data.latest_change.display_kind === "TEXT" ? (
+                      <p className="diff-requirement-text">{data.latest_change.old}</p>
+                    ) : (
+                      <>
+                        <strong>{data.latest_change.old_count}</strong>
+                        <p>{data.latest_change.subject_label ?? "CISSP-certified engineers"}</p>
+                      </>
+                    )}
                     <StatusPill status={data.latest_change.old_assessment} compact />
                   </div>
                   <div className="diff-arrow">
                     <ArrowRight size={20} />
                   </div>
                   <div className="diff-new">
-                    <span>Current · {data.latest_change.stable_key} v2</span>
-                    <strong>{data.latest_change.new_count}</strong>
-                    <p>CISSP-certified engineers</p>
+                    <span>
+                      Current · {data.latest_change.stable_key} v
+                      {data.latest_change.new_version ?? 2}
+                    </span>
+                    {data.latest_change.display_kind === "TEXT" ? (
+                      <p className="diff-requirement-text">{data.latest_change.new}</p>
+                    ) : (
+                      <>
+                        <strong>{data.latest_change.new_count}</strong>
+                        <p>{data.latest_change.subject_label ?? "CISSP-certified engineers"}</p>
+                      </>
+                    )}
                     <StatusPill status={data.latest_change.new_assessment} compact />
                   </div>
                 </div>
@@ -518,6 +517,30 @@ function App() {
                     <strong>{data.latest_change.impact.recovery_paths_found}</strong> recovery path
                   </span>
                 </div>
+                {data.portfolio_impact && (
+                  <div className="portfolio-impact-trigger">
+                    <span className="portfolio-trigger-icon">
+                      <Network size={16} />
+                    </span>
+                    <div>
+                      <span className="portfolio-trigger-kicker">
+                        Cross-bid impact
+                        {data.portfolio_impact.synthetic && <em>Synthetic demo</em>}
+                      </span>
+                      <strong>{data.portfolio_impact.summary}</strong>
+                      <small>
+                        {data.portfolio_impact.capacity.concurrent_required} required across{" "}
+                        {data.portfolio_impact.affected_bids.length} pursuits ·{" "}
+                        {data.portfolio_impact.capacity.potential_after_recovery} potential · shortfall{" "}
+                        {data.portfolio_impact.capacity.shortfall}
+                      </small>
+                    </div>
+                    <button onClick={() => setPortfolioOpen(true)}>
+                      Compare {data.portfolio_impact.routes.length} routes
+                      <ArrowRight size={14} />
+                    </button>
+                  </div>
+                )}
               </>
             ) : (
               <div className="no-change-state">
@@ -536,7 +559,7 @@ function App() {
             <article className="panel candidate-panel">
               <div className="panel-heading">
                 <div>
-                  <span className="eyebrow">Potential fourth engineer</span>
+                  <span className="eyebrow">Potential recovery candidate</span>
                   <h2>Evidence gap review</h2>
                 </div>
                 <Users size={21} />
@@ -558,7 +581,8 @@ function App() {
               <div className="candidate-checks">
                 <div>
                   <span>
-                    <BadgeCheck size={15} /> CISSP
+                    <BadgeCheck size={15} />
+                    {data.recovery_candidate.certification_name ?? "Certification"}
                   </span>
                   <StatusPill status={data.recovery_candidate.certification} compact />
                 </div>
@@ -638,26 +662,27 @@ function App() {
         events={data.activity_events}
       />
 
-      {workflowRunning && workflowStage >= 0 && (
-        <div className="workflow-overlay" aria-live="polite">
-          <div className="workflow-card">
-            <div className="workflow-orbit">
-              <span />
-              <Zap size={20} fill="currentColor" />
-            </div>
-            <span className="eyebrow">Applying corrigendum</span>
-            <h2>{workflowStages[workflowStage]}</h2>
-            <p>Updating requirements, evidence checks, tasks, and deadlines…</p>
-            <div className="workflow-progress">
-              {workflowStages.map((stage, index) => (
-                <span
-                  key={stage}
-                  className={index < workflowStage ? "done" : index === workflowStage ? "active" : ""}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
+      <PortfolioSimulationDrawer
+        open={portfolioOpen}
+        onClose={() => setPortfolioOpen(false)}
+        impact={data.portfolio_impact}
+        bidStatus={metrics.operational_status}
+      />
+
+      <TenderLabDrawer open={tenderLabOpen} onClose={() => setTenderLabOpen(false)} />
+
+      {amendmentOpen && (
+        <AmendmentReviewDrawer
+          bid={data}
+          onApplied={(result) => {
+            setData(result);
+            setSelectedId(preferredRequirement(result));
+            setChanged(true);
+            window.setTimeout(() => setChanged(false), 1900);
+          }}
+          onClose={() => setAmendmentOpen(false)}
+          open
+        />
       )}
     </div>
   );

@@ -5,7 +5,7 @@ from app.database import SessionLocal
 from app.demo.seed import DEMO_BID_ID
 from app.enums import OperationalStatus
 from app.main import app
-from app.models import Assessment, Evidence, Requirement
+from app.models import Assessment, Employee, Evidence, Requirement
 from app.services.metrics import calculate_submission_coverage, derive_operational_status
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -101,6 +101,27 @@ def test_recovery_candidate_retains_evidence_gaps(client: TestClient):
     assert candidate["can_satisfy_now"] is False
 
 
+def test_inactive_employee_is_not_counted_as_certified_capacity(client: TestClient):
+    with SessionLocal() as session:
+        employee = session.get(Employee, "EMP-A")
+        employee.employment_status = "INACTIVE"
+        session.commit()
+    data = _apply(client)
+    r17 = next(item for item in data["requirements"] if item["stable_key"] == "R17")
+    assert r17["assessment"] == "UNMET"
+    assert data["metrics"]["operational_status"] == "BLOCKED"
+
+
+def test_unavailable_employee_is_not_offered_as_recovery_capacity(client: TestClient):
+    with SessionLocal() as session:
+        employee = session.get(Employee, "EMP-D")
+        employee.availability_status = "UNAVAILABLE"
+        session.commit()
+    data = _apply(client)
+    assert data["recovery_candidate"] is None
+    assert data["metrics"]["operational_status"] == "BLOCKED"
+
+
 def test_recovery_tasks_and_dependencies_are_created(client: TestClient):
     data = _apply(client)
     recovery = {task["id"]: task for task in data["tasks"] if task["recovery_path"]}
@@ -164,6 +185,7 @@ def test_selectable_blocked_fixture(client: TestClient):
     assert data["metrics"]["operational_status"] == "BLOCKED"
     assert data["latest_change"]["impact"]["recovery_paths_found"] == 0
     assert data["recovery_candidate"] is None
+    assert data["portfolio_impact"] is None
     unresolved = data["calculations"]["operational_feasibility"]["unresolved"]
     assert unresolved == [
         {

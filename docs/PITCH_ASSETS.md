@@ -8,8 +8,23 @@ spread across documents and spreadsheets, so an apparently ready bid can become 
 ## One-line product thesis
 
 GeBIZ BidOps turns tender language into source-linked obligations and propagates every validated
-change through evidence, feasibility, and recovery—while deterministic rules and humans retain
-control of the bid decision.
+change through evidence, feasibility, recovery, and cross-tender capability impact—while
+deterministic rules and humans retain control of the bid decision.
+
+## Competition story
+
+> We do not predict which tender an SME will win. We show which combinations it can responsibly
+> keep pursuing, and exactly how one changed clause alters that answer.
+
+The demonstrated chain is:
+
+```text
+Validated clause change → Dated capability-demand delta → Cross-tender collision
+→ { Deterministic counterfactual options + Capability roadmap } → Human decision
+```
+
+This is a focused product angle, not a claim that document extraction, amendment tracking, or
+capacity planning has never existed before.
 
 ## Architecture
 
@@ -26,13 +41,17 @@ flowchart LR
     WF --> RULES[Deterministic assessment and rule services]
     RULES --> DB[(Local SQLite state)]
     DB --> METRICS[Feasibility, gates, coverage, deadline risk]
-    METRICS --> UI
+    METRICS --> PORT[Deterministic portfolio simulation]
+    PORT --> UI
     UI -->|review and final approval| H
     H -.->|manual only| G[Official GeBIZ submission]
 ```
 
 The frozen MVP keeps React, FastAPI, LangGraph, and SQLite local. AWS is used only for optional
 Bedrock inference after sandbox approval; there is no always-on cloud infrastructure.
+
+The portfolio panel is generated from synthetic capability counts, a fictional companion
+opportunity, and synthetic service windows. It is read-only and does not persist a staffing plan.
 
 ## Corrigendum sequence
 
@@ -61,6 +80,21 @@ sequenceDiagram
     UI-->>User: Review recovery and human checkpoint
 ```
 
+## Portfolio extension
+
+```mermaid
+flowchart LR
+    VC[Validated R17 change<br/>3 to 4] --> DD[Dated demand delta<br/>plus 1 capability slot]
+    DD --> OC[Overlap calculation<br/>5 required vs 4 potential]
+    OC --> CF[Counterfactual routes<br/>deterministic consequences]
+    CF --> HD[Human decision]
+    OC --> CR[Capability roadmap<br/>known gaps only]
+```
+
+In this demo, the current bid is still `RECOVERABLE`; the separate continue-all portfolio is
+`BLOCKED`. The companion opportunity, both service windows, capacity counts, and no-double-booking
+rule are synthetic assumptions.
+
 ## Core control flow
 
 ```mermaid
@@ -86,6 +120,9 @@ Invariant: **Requirement → Evidence → Assessment → Change → Impact → R
 | Decide `FEASIBLE`, `RECOVERABLE`, `BLOCKED`, `UNCERTAIN` | No | Yes | Challenge/approve internal conclusion |
 | Compute Critical Gates, Submission Coverage, Deadline Risk | No | Yes | Act on drivers |
 | Create recovery tasks and dependencies | No | Yes | Own and complete tasks |
+| Sum capability demand across supplied service windows | No | Yes | Confirm inputs and assumptions |
+| Calculate counterfactual route outcomes and capability gaps | No | Yes | Compare consequences and choose |
+| Allocate named people, contact partners, withdraw, or reprioritise bids | No | No automatic action | Sole control |
 | Commercial decision, declarations, final approval, submission | No | No automatic action | Sole control |
 
 ## Regression benchmark summary
@@ -118,21 +155,29 @@ rules, not unseen model accuracy.
   Haiku 4.5 is unavailable because the sandbox
   role lacks required Marketplace subscription actions.
 - The demo data and documents are synthetic.
+- The portfolio companion opportunity, delivery windows, capability counts, and allocation
+  assumptions are synthetic. The capability layer uses aggregate counts, not named-person
+  scheduling or live HR/calendar data.
 - The product accepts extracted page/section text; PDF upload, OCR, and live GeBIZ retrieval are
   not implemented.
 - No model or system can guarantee extraction completeness; human review and blind evaluation are
   still required.
 - SQLite/local single-user execution is suitable for the hackathon, not production multi-user use.
-- There is no authentication, automatic proposal writing, pricing optimization, competitor
-  intelligence, or GeBIZ submission.
+- There is no authentication, automatic proposal writing, pricing or margin optimisation, award
+  probability, competitor intelligence, staff reallocation, partner outreach, bid withdrawal, or
+  GeBIZ submission.
+- Capability-roadmap items address only known gaps in the supplied opportunity set. They do not
+  predict qualification, awards, revenue, or startup growth.
 
 ## 30-second pitch
 
 “A bid can look ready in the morning and become unsafe when a corrigendum lands that afternoon.
-GeBIZ BidOps links each requirement to its evidence, keeps earlier decisions as versioned history,
-and shows the team exactly what must be recovered before closing. Bedrock reads the change;
-ordinary rules decide the bid state; people keep the final say. In our demo, one sentence raises
-the manpower minimum from three to four and the bid moves from FEASIBLE to RECOVERABLE.”
+GeBIZ BidOps links each requirement to evidence and keeps requirement and assessment changes as
+versioned history. In
+our demo, one sentence raises R17 from three people to four. The bid becomes recoverable, but that
+extra demand collides with a second synthetic commitment: five concurrent slots against four
+potential. The interpretation layer structures the change; deterministic code calculates the
+consequences; people make the decision.”
 
 ## 60-second pitch
 
@@ -141,19 +186,32 @@ submit. Today, mandatory clauses, staff qualifications, evidence, tasks, and cor
 separate documents and spreadsheets. A high completion percentage can hide one fatal gate.
 
 GeBIZ BidOps gives the team one working record: Requirement, Evidence, Assessment, Change, Impact,
-and Recovery Action. Bedrock has one narrow job—turn tender wording into validated structured
-changes with a document, page, section, and exact snippet. From there, ordinary code versions the
-requirement, retires stale assessments, rechecks evidence, applies the four-state feasibility
-policy, and calculates coverage and deadline risk.
+and Recovery Action. When configured and successful, Bedrock has one narrow job—turn tender wording
+into validated structured changes with a document, page, section, and exact snippet; the demo has a
+clearly labelled fallback for the fixed fixture. From there, ordinary code versions the requirement,
+retires stale assessments, rechecks evidence, applies the four-state feasibility policy, and
+calculates coverage, deadline risk, and dated capability demand.
 
 When Corrigendum #2 raises R17 from three to four CISSP engineers, BidOps retains v1, creates v2,
 finds that Engineer D's CV and availability are incomplete, and moves FEASIBLE to RECOVERABLE with
-four dependency-aware actions. It also demonstrates BLOCKED and UNCERTAIN outcomes, so it does not
-always say yes. Final approval and GeBIZ submission remain human decisions.”
+four dependency-aware actions. A separate synthetic portfolio view then combines four R17 slots
+with one overlapping companion commitment. Five required against four potential produces a hard
+shortfall. The team can compare deterministic consequences—protect either pursuit or verify
+additional capacity—but BidOps does not recommend, reassign, withdraw, or submit. Final approval
+and every external action remain human decisions.”
 
 ## Business value
 
-BidOps reduces amendment-response time, prevents stale passes from surviving a source change, and
-focuses scarce bid-team effort on the one obligation or task that controls submission viability.
-For an SME, that means fewer avoidable disqualifications, clearer ownership, faster recovery, and a
-more defensible internal go/no-go decision—without automating irreversible submission.
+BidOps shortens the path from amendment to an explainable internal response, prevents a stale pass
+from remaining current after its source changes, and exposes when two supplied opportunities depend
+on more concurrent capability than the team has identified. For an SME or early-stage supplier,
+that means clearer ownership, more focused capability work, and a more defensible internal
+go/no-go discussion—without pretending to predict an award or automating an irreversible action.
+
+## Phrases to avoid
+
+Do not describe BidOps as a world first, a live GeBIZ integration, a named-person scheduler, a
+pricing or win-probability engine, or an autonomous bidding agent. Do not claim that SMEs receive a
+procurement preference, that any agency follows an unsupported fixed scoring pattern, or that a
+particular policy applies to every tender. Present only the source-linked clause, supplied scenario
+facts, deterministic arithmetic, and measured test results.

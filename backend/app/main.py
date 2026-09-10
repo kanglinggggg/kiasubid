@@ -1,11 +1,28 @@
 from contextlib import asynccontextmanager
 from uuid import uuid4
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.amendments import (
+    AmendmentAlreadyAppliedError,
+    AmendmentApplyBlockedError,
+    AmendmentApplyRequest,
+    AmendmentPreviewExpiredError,
+    AmendmentPreviewRequest,
+    AmendmentPreviewResponse,
+    AmendmentPreviewStaleError,
+    AmendmentSourceVersionConflictError,
+    apply_amendment_preview,
+    preview_amendment,
+)
+from app.company_profile import (
+    BusinessProfileIngestionError,
+    BusinessProfileIngestionResult,
+    ingest_business_profile,
+)
 from app.config import settings
 from app.database import create_schema, get_session
 from app.demo.fixtures import list_demo_fixtures, load_demo_fixture
@@ -20,11 +37,43 @@ from app.llm.schemas import (
     RequirementInterpretationRequest,
 )
 from app.models import Evidence, HumanApproval, Task, TaskDependency, Tender
+from app.portfolio import (
+    PortfolioSimulationRequest,
+    PortfolioSimulationResponse,
+    capability_roadmap,
+    evaluate_portfolio,
+    strategy_routes,
+)
+from app.public_data import AwardContextResponse, get_award_context
 from app.schemas import EvidenceVerificationRequest, HumanApprovalRequest
 from app.serializers import serialize_bid
 from app.services.clock import now
 from app.services.deadline import calculate_deadline_risk
 from app.services.metrics import calculate_submission_coverage, derive_operational_status
+from app.tender_lab.agent_loop import run_agent_loop
+from app.tender_lab.agent_models import AgentLoopRequest, AgentLoopResponse
+from app.tender_lab.change_simulator import (
+    ChangeSimulationRequest,
+    ChangeSimulationResponse,
+    simulate_tender_change,
+)
+from app.tender_lab.extractor import (
+    MAX_UPLOAD_BYTES,
+    DocumentExtractionError,
+    extract_document,
+)
+from app.tender_lab.partner_router import (
+    PartnerRoutePackage,
+    PartnerRouteRequest,
+    build_partner_route_package,
+)
+from app.tender_lab.sample import sample_request
+from app.tender_lab.schemas import (
+    DocumentExtractionResponse,
+    TenderLabRequest,
+    TenderLabResponse,
+)
+from app.tender_lab.workflow import run_tender_lab
 
 
 @asynccontextmanager
@@ -94,9 +143,147 @@ def interpret_corrigendum_change(
     return interpreter.interpret_change(payload)
 
 
+@app.post("/api/portfolio/simulate", response_model=PortfolioSimulationResponse)
+def simulate_portfolio(payload: PortfolioSimulationRequest) -> PortfolioSimulationResponse:
+    """Run a deterministic, non-persisting capability simulation for supplied bid scenarios."""
+    evaluation = evaluate_portfolio(payload)
+    return PortfolioSimulationResponse.model_validate(
+        {
+            **evaluation,
+            "routes": strategy_routes(payload),
+            "capability_roadmap": capability_roadmap(payload, evaluation),
+        }
+    )
+
+
+@app.get("/api/tender-lab/sample/{mode}", response_model=TenderLabRequest)
+def tender_lab_sample(mode: str) -> TenderLabRequest:
+    """Load an explicit synthetic sample without changing the operational demo."""
+    normalised_mode = mode.upper()
+    if normalised_mode not in {"SME", "STARTUP"}:
+        raise HTTPException(status_code=404, detail="Tender Lab mode must be SME or STARTUP.")
+    return sample_request(normalised_mode)  # type: ignore[arg-type]
+
+
+@app.post("/api/tender-lab/analyze", response_model=TenderLabResponse)
+def analyze_tender_lab(payload: TenderLabRequest) -> TenderLabResponse:
+    """Run the non-persisting Tender Lab decision-support workflow."""
+    return run_tender_lab(payload)
+
+
+@app.post("/api/tender-lab/agent-loop", response_model=AgentLoopResponse)
+def run_tender_lab_agent_loop(payload: AgentLoopRequest) -> AgentLoopResponse:
+    """Run a bounded planner-specialist-critic loop without changing bid state."""
+    return run_agent_loop(payload)
+
+
+@app.post("/api/tender-lab/partner-route", response_model=PartnerRoutePackage)
+def build_tender_lab_partner_route(payload: PartnerRouteRequest) -> PartnerRoutePackage:
+    """Build a non-persisting, evidence-bounded subcontracting research package."""
+    return build_partner_route_package(payload)
+
+
+@app.post("/api/tender-lab/simulate-change", response_model=ChangeSimulationResponse)
+def simulate_tender_lab_change(payload: ChangeSimulationRequest) -> ChangeSimulationResponse:
+    """Rehearse how supplied amendment wording invalidates Tender Lab outputs without persisting."""
+    return simulate_tender_change(payload)
+
+
+@app.post("/api/tender-lab/extract", response_model=DocumentExtractionResponse)
+async def extract_tender_lab_document(
+    file: UploadFile = File(...),
+) -> DocumentExtractionResponse:
+    """Extract selectable text in memory; no uploaded bytes are persisted."""
+    raw = await file.read(MAX_UPLOAD_BYTES + 1)
+    try:
+        return extract_document(
+            filename=file.filename or "upload",
+            content_type=file.content_type,
+            raw=raw,
+        )
+    except DocumentExtractionError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    finally:
+        await file.close()
+
+
+@app.post(
+    "/api/tender-lab/company-profile/extract",
+    response_model=BusinessProfileIngestionResult,
+)
+async def extract_tender_lab_company_profile(
+    file: UploadFile = File(...),
+) -> BusinessProfileIngestionResult:
+    """Extract an uploaded profile in memory and return source-backed declared company facts."""
+    raw = await file.read(MAX_UPLOAD_BYTES + 1)
+    try:
+        document = extract_document(
+            filename=file.filename or "business-profile.pdf",
+            content_type=file.content_type,
+            raw=raw,
+        )
+        return ingest_business_profile(document)
+    except (DocumentExtractionError, BusinessProfileIngestionError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    finally:
+        await file.close()
+
+
+@app.get("/api/public-data/gebiz/awards", response_model=AwardContextResponse)
+def gebiz_award_context(
+    query: str = Query(default="cybersecurity", min_length=2, max_length=100),
+    agency: str | None = Query(default=None, max_length=160),
+) -> AwardContextResponse:
+    """Return descriptive context from the official MOF award dataset or a labelled cache."""
+    return get_award_context(query=query, agency=agency)
+
+
 @app.get("/api/bids/{bid_id}")
 def get_bid(bid_id: str, session: Session = Depends(get_session)) -> dict:
     _get_bid_or_404(session, bid_id)
+    return serialize_bid(session, bid_id)
+
+
+@app.post(
+    "/api/bids/{bid_id}/amendments/preview",
+    response_model=AmendmentPreviewResponse,
+)
+def preview_bid_amendment(
+    bid_id: str,
+    payload: AmendmentPreviewRequest,
+    session: Session = Depends(get_session),
+) -> AmendmentPreviewResponse:
+    """Dry-run one user-selected current requirement without writing bid state."""
+    try:
+        return preview_amendment(session, bid_id, payload)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (AmendmentPreviewStaleError, AmendmentSourceVersionConflictError) as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+
+
+@app.post("/api/bids/{bid_id}/amendments/apply")
+def apply_bid_amendment(
+    bid_id: str,
+    payload: AmendmentApplyRequest,
+    session: Session = Depends(get_session),
+) -> dict:
+    """Apply a reviewed preview to the internal workspace in one transaction."""
+    _get_bid_or_404(session, bid_id)
+    try:
+        apply_amendment_preview(session, bid_id, payload)
+    except (AmendmentPreviewExpiredError, AmendmentApplyBlockedError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+    except (
+        AmendmentPreviewStaleError,
+        AmendmentAlreadyAppliedError,
+        AmendmentSourceVersionConflictError,
+    ) as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    session.expire_all()
     return serialize_bid(session, bid_id)
 
 

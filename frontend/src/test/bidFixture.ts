@@ -1,4 +1,131 @@
-import type { BidState } from "../types/bid";
+import type { BidState, PortfolioImpact } from "../types/bid";
+
+export const portfolioImpactFixture: PortfolioImpact = {
+  mode: "SIMULATION_ONLY",
+  synthetic: true,
+  trigger: {
+    stable_key: "R17",
+    change_summary: "Minimum count 3 → 4",
+  },
+  summary:
+    "Recovering R17 creates a shared-personnel conflict between this tender and an overlapping delivery commitment.",
+  before_state: "RECOVERABLE",
+  after_state: "BLOCKED",
+  assumptions: [
+    "The companion delivery commitment and service windows are synthetic demo inputs.",
+    "Potential capacity assumes Engineer D's CV and availability gaps are resolved.",
+    "No employee is double-booked across overlapping delivery windows.",
+    "No external delivery partner is assumed until its qualification and availability are verified.",
+  ],
+  capacity: {
+    capability: "CISSP delivery personnel",
+    unit: "concurrent CISSP assignments",
+    proven_now: 3,
+    potential_after_recovery: 4,
+    concurrent_required: 5,
+    shortfall: 1,
+    window_start: "2026-10-01T00:00:00",
+    window_end: "2026-12-01T00:00:00",
+  },
+  affected_bids: [
+    {
+      bid_id: "BID-DEMO-001",
+      reference_number: "DGA/ICT/2026/017",
+      title: "Managed Cybersecurity Monitoring and Response Services",
+      relationship: "CURRENT",
+      required_capacity: 4,
+    },
+    {
+      bid_id: "BID-DEMO-SOC-008",
+      reference_number: "DMA/SOC/2026/008",
+      title: "Municipal SOC Operations Extension",
+      relationship: "OTHER",
+      required_capacity: 1,
+    },
+  ],
+  routes: [
+    {
+      id: "protect-current-tender",
+      action: "RECOVER",
+      label: "Protect this tender",
+      rationale:
+        "Complete Engineer D's evidence and reserve all four potential CISSP personnel for the amended R17 obligation.",
+      outcomes: [
+        { bid_id: "BID-DEMO-001", status: "RECOVERABLE" },
+        { bid_id: "BID-DEMO-SOC-008", status: "BLOCKED" },
+      ],
+      unresolved_facts: ["Engineer D's current CV", "Engineer D's availability"],
+      requires_human_decision: true,
+    },
+    {
+      id: "protect-existing-commitment",
+      action: "WALK_AWAY",
+      label: "Protect existing commitment",
+      rationale:
+        "Keep one CISSP assignment for the companion bid; only three potential slots remain for R17, so the amended tender cannot currently proceed.",
+      outcomes: [
+        { bid_id: "BID-DEMO-001", status: "BLOCKED" },
+        { bid_id: "BID-DEMO-SOC-008", status: "FEASIBLE" },
+      ],
+      unresolved_facts: [],
+      requires_human_decision: true,
+    },
+    {
+      id: "verify-external-capacity",
+      action: "PARTNER",
+      label: "Verify external capacity",
+      rationale:
+        "Both bids may remain viable if one additional qualified delivery slot is verified before allocation.",
+      outcomes: [
+        { bid_id: "BID-DEMO-001", status: "UNCERTAIN" },
+        { bid_id: "BID-DEMO-SOC-008", status: "FEASIBLE" },
+      ],
+      unresolved_facts: [
+        "Partner qualification",
+        "Partner availability",
+        "Tender permission for the proposed delivery arrangement",
+      ],
+      requires_human_decision: true,
+    },
+  ],
+  capability_roadmap: [
+    {
+      priority: 1,
+      capability: "CISSP_DELIVERY_PERSONNEL",
+      opportunity_ids: ["BID-DEMO-001", "BID-DEMO-SOC-008"],
+      opportunities_affected: 2,
+      requirement_count: 2,
+      earliest_window_start: "2026-09-01T00:00:00",
+      sources: ["Current R17 structured minimum_count", "Synthetic companion-bid staffing commitment"],
+      gap_type: "ADDITIONAL_CAPACITY_REQUIRED",
+      known_gap: 1,
+      action: "Source 1 additional verified capability slot",
+      effect: "Closes the hard concurrent-capacity shortfall in this scenario.",
+      basis: "Calculated peak demand minus identified potential capacity.",
+    },
+    {
+      priority: 2,
+      capability: "CISSP_DELIVERY_PERSONNEL",
+      opportunity_ids: ["BID-DEMO-001", "BID-DEMO-SOC-008"],
+      opportunities_affected: 2,
+      requirement_count: 2,
+      earliest_window_start: "2026-09-01T00:00:00",
+      sources: ["Current R17 structured minimum_count", "Synthetic companion-bid staffing commitment"],
+      gap_type: "EVIDENCE_OR_AVAILABILITY",
+      known_gap: 1,
+      action: "Complete evidence and availability for 1 candidate",
+      effect: "Converts identified potential capacity into proven delivery capacity.",
+      basis:
+        "Three complete R17 personnel evidence sets plus Engineer D as one identified candidate with unresolved CV and availability.",
+    },
+  ],
+  calculation: {
+    rule:
+      "For each capability, sum mandatory demand across overlapping delivery windows. FEASIBLE fits proven capacity; RECOVERABLE fits only after potential capacity is verified; BLOCKED exceeds potential capacity; an unknown mandatory count is UNCERTAIN.",
+    precedence: ["BLOCKED", "UNCERTAIN", "RECOVERABLE", "FEASIBLE"],
+  },
+  calculated_at: "2026-08-21T15:00:00",
+};
 
 export const bidFixture: BidState = {
   bid: {
@@ -132,6 +259,7 @@ export const bidFixture: BidState = {
   latest_change: null,
   impact_chain: [],
   recovery_candidate: null,
+  portfolio_impact: null,
   activity_events: [],
   human_review: {
     required: true,

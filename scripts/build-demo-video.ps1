@@ -5,6 +5,7 @@ param(
     [string]$AppUrl = "http://127.0.0.1:5173/",
     [string]$SceneFile = "docs\video\demo-scenes.json",
     [string]$OutputName = "gebiz-bidops-demo-draft.mp4",
+    [string]$PlaywrightPackageDir = $env:PLAYWRIGHT_PACKAGE_DIR,
     [switch]$NoNarration
 )
 
@@ -30,12 +31,20 @@ if ($health.status -ne "ok" -or $frontend.StatusCode -ne 200) {
 }
 
 $node = (Get-Command node -ErrorAction Stop).Source
-$playwrightPackage = Join-Path $projectRoot "node_modules\playwright"
-if (-not (Test-Path -LiteralPath $playwrightPackage)) {
-    $playwrightPackage = Join-Path $env:USERPROFILE ".cache\codex-runtimes\codex-primary-runtime\dependencies\node\node_modules\playwright"
+$playwrightCandidates = @()
+if ($PlaywrightPackageDir) {
+    $playwrightCandidates += $PlaywrightPackageDir
 }
-if (-not (Test-Path -LiteralPath $playwrightPackage)) {
-    throw "Playwright was not found. Install it locally or set PLAYWRIGHT_PACKAGE_DIR."
+$playwrightCandidates += @(
+    (Join-Path $projectRoot "frontend\node_modules\playwright-core"),
+    (Join-Path $projectRoot "node_modules\playwright"),
+    (Join-Path $env:USERPROFILE ".cache\codex-runtimes\codex-primary-runtime\dependencies\node\node_modules\playwright")
+)
+$playwrightPackage = $playwrightCandidates |
+    Where-Object { $_ -and (Test-Path -LiteralPath $_) } |
+    Select-Object -First 1
+if (-not $playwrightPackage) {
+    throw "Playwright was not found. Run npm install in frontend or pass -PlaywrightPackageDir."
 }
 
 $ffmpegCommand = Get-Command ffmpeg -ErrorAction SilentlyContinue

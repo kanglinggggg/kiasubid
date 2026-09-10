@@ -4,7 +4,10 @@
 
 GeBIZ BidOps is a supplier-side bid control layer for Singapore SMEs. It turns tender obligations, company evidence, assessments, tasks, and tender changes into one persistent operational state. It does not replace GeBIZ, submit a bid, or make a commercial bid/no-bid decision.
 
-This hackathon MVP is optimised for one clear story: a tender was feasible yesterday; a corrigendum changes one mandatory manpower requirement; the old pass becomes stale; the system finds a recovery route without falsely restoring the bid to green.
+This hackathon MVP is optimised for one clear story: a tender was feasible yesterday; a
+corrigendum changes one mandatory manpower requirement; the old pass becomes stale; and the same
+change creates a capacity collision with another opportunity. BidOps shows the bid-level recovery
+and the portfolio-level trade-off without falsely restoring either one to green.
 
 ## Product
 
@@ -22,9 +25,20 @@ BidOps models this as:
 Requirement → Evidence → Assessment → Change → Impact → Recovery Action
 ```
 
+The optional portfolio simulation continues the trace:
+
+```text
+Validated clause change → Dated capability-demand delta → Cross-tender collision
+→ { Deterministic counterfactual options + Capability roadmap } → Human decision
+```
+
 Operational feasibility uses four explicit states: `FEASIBLE`, `RECOVERABLE`, `BLOCKED`, and `UNCERTAIN`. Submission Coverage is tracked independently and never overrides a broken mandatory gate.
 
-The exact implemented formulas, precedence, thresholds, and API trace fields are documented in [Deterministic calculation rules](docs/CALCULATION_RULES.md). The current runtime AI boundary is documented in [Current AI boundary](docs/AI_BOUNDARY.md).
+The exact bid-state formulas, precedence, thresholds, and API trace fields are documented in
+[Deterministic calculation rules](docs/CALCULATION_RULES.md). The separate, caller-supplied and
+non-persisting portfolio calculation is documented in
+[Portfolio capability simulation](docs/PORTFOLIO_SIMULATION.md). The current runtime AI boundary is
+documented in [Current AI boundary](docs/AI_BOUNDARY.md).
 
 ## Why this is more than a chatbot
 
@@ -41,11 +55,16 @@ Persistent bid state
 + human checkpoint
 ```
 
-LangGraph coordinates the steps. Bedrock handles the language comparison; ordinary code handles
-numeric thresholds, certification validity, version history, critical gates, task dependencies,
-coverage, and deadline slack. The main synthetic fixture also has a built-in interpretation, so the
-demo remains reliable without cloud credentials while still creating the same persisted state
-changes.
+After that persisted LangGraph workflow completes, the bid read model can attach a separate,
+non-persisting portfolio simulation from supplied capability counts and service windows. Route
+selection stays in the UI and does not mutate the workflow or database.
+
+LangGraph coordinates the bid-change steps. Bedrock handles the language comparison; ordinary code
+handles numeric thresholds, certification validity, version history, critical gates, task
+dependencies, coverage, deadline slack, overlapping service windows, peak capability demand, and
+counterfactual route outcomes. People decide which pursuit to protect. The main synthetic
+fixture also has a built-in interpretation, so the demo remains reliable without cloud credentials
+while still creating the same persisted state changes.
 
 ## Architecture
 
@@ -69,6 +88,8 @@ flowchart TD
     K --> L[(SQLite audit history)]
     L --> M[FastAPI]
     M --> N[React Bid Control Room]
+    M --> P[Read-only portfolio simulation]
+    P --> N
 ```
 
 ### Project layout
@@ -78,6 +99,7 @@ backend/app/
   demo/          synthetic company, tender, evidence, and assessments
   graph/         typed LangGraph state and corrigendum workflow
   llm/           Bedrock prompts, Pydantic outputs, validation, and demo fallback
+  portfolio/     deterministic capability-demand simulation and demo scenario
   rules/         typed reusable procurement rules and deterministic evaluators
   services/      assessment, feasibility, coverage, and deadline rules
   database.py    SQLite engine and session lifecycle
@@ -182,9 +204,20 @@ the interpretation; otherwise it displays Demo fallback.
 5. Show the state transition to `RECOVERABLE` and `7 / 8` Critical Gates.
 6. Show Engineer D: CISSP is verified, CV is stale, and availability is unknown. The requirement correctly remains `PARTIAL`.
 7. Show the four recovery tasks, their dependencies, the verification deadline, and the impact chain.
-8. Open **Audit trail** to show the recorded events from document parsing through status recomputation.
-9. Point out the locked human checkpoint. BidOps never submits to GeBIZ.
-10. Click the reset icon to replay the demonstration.
+8. In **Latest Change**, open **Compare 3 routes**. Keep the two scopes separate: the current bid is
+   `RECOVERABLE`, while the synthetic continue-all portfolio is `BLOCKED` because overlapping demand
+   is five capability slots against four identified potential slots.
+9. Compare the three deterministic counterfactuals: protect this tender, protect the companion
+   commitment, or verify additional capacity. These are consequences under stated assumptions, not
+   recommendations or automatic actions.
+10. Show **Capability next steps** and **Assumptions and calculation**. The companion opportunity,
+    both service windows, the no-double-booking rule, and the capacity counts are synthetic demo
+    assumptions.
+11. Open **Audit trail** to show the recorded bid-level events from document parsing through status
+    recomputation.
+12. Point out the locked human checkpoint. BidOps never reallocates staff, withdraws a bid, engages a
+    partner, or submits to GeBIZ.
+13. Click the reset icon to replay the demonstration.
 
 ### Demo reset
 
@@ -203,6 +236,7 @@ The primary demo endpoints are:
 GET  /api/bids/BID-DEMO-001
 POST /api/tenders/interpret-requirements
 POST /api/corrigenda/interpret-change
+POST /api/portfolio/simulate
 POST /api/demo/reset
 POST /api/demo/bids/BID-DEMO-001/apply-corrigendum
 POST /api/tasks/{task_id}/complete
@@ -210,7 +244,11 @@ POST /api/evidence/{evidence_id}/verify
 POST /api/bids/BID-DEMO-001/human-approve
 ```
 
-The two interpretation endpoints return validated structured objects without mutating bid state. Applying the same corrigendum twice returns `409 Conflict`; unmatched, ambiguous, or unsafe changes return useful `422` errors before an assessment is superseded.
+The two interpretation endpoints return validated structured objects without mutating bid state.
+The portfolio endpoint runs a deterministic, non-persisting simulation over caller-supplied
+capability pools, opportunity demands, and dated service windows. Applying the same corrigendum
+twice returns `409 Conflict`; unmatched, ambiguous, or unsafe changes return useful `422` errors
+before an assessment is superseded.
 
 ## Testing
 
@@ -270,8 +308,10 @@ The backend suite covers Bedrock- and Groq-shaped provider boundaries, exact sou
 prompt-injection defenses, ambiguity, equivalent paraphrases, removal, deadline-only isolation,
 malformed output retry/failure, the natural-language R17 transition, immutable version history,
 evidence gaps, recovery dependencies, deterministic coverage, duplicate amendments, and explicit
-`BLOCKED` and `UNCERTAIN` branches. Frontend tests verify the hero state, truthful provider label,
-and backend-unavailable failure state.
+`BLOCKED` and `UNCERTAIN` branches. Separate portfolio tests cover overlap and adjacent windows,
+peak-demand arithmetic, hard shortfall, missing mandatory counts, unsupported capabilities,
+non-persistence, and preservation of the bid-level hero state. Frontend tests verify the hero
+state, truthful provider label, portfolio boundary labels, and backend-unavailable failure state.
 
 Authorized external benchmark cases can be added as normalized JSON without changing Python test code. See [the benchmark harness guide](backend/tests/benchmarks/README.md).
 
@@ -293,15 +333,23 @@ The current comparison retained `amazon.nova-lite-v1:0`: it outperformed Nova Mi
 Nova 2 Lite system inference profile on the same nine known regression cases.
 
 Competition material: [Judge Q&A](docs/JUDGE_QA.md), [Demo runbook](docs/DEMO_RUNBOOK.md),
-[Demo video script](docs/DEMO_VIDEO_SCRIPT.md), and [Pitch assets](docs/PITCH_ASSETS.md).
+[Portfolio simulation](docs/PORTFOLIO_SIMULATION.md), [Demo video script](docs/DEMO_VIDEO_SCRIPT.md),
+and [Pitch assets](docs/PITCH_ASSETS.md).
 
 ## Synthetic data
 
-All company, employee, tender, evidence, project, and corrigendum data is fictional. NexusFort Technologies Pte. Ltd., Demo Government Agency, document references, certification identifiers, and project records exist only for this demonstration. The tender language is original synthetic text.
+All company, employee, tender, evidence, project, and corrigendum data is fictional. NexusFort
+Technologies Pte. Ltd., Demo Government Agency, document references, certification identifiers,
+and project records exist only for this demonstration. The tender language is original synthetic
+text. The companion opportunity, service windows, capacity pool, and no-double-booking assumption
+used by the portfolio demonstration are also synthetic; they are not GeBIZ or employer records.
 
 ## Safety and human control
 
-BidOps supports internal preparation and operational verification. It does not claim legal certainty, sign declarations, make commercial decisions, fabricate GeBIZ integrations, or submit tenders. Final tender interpretation and submission remain the supplier's responsibility.
+BidOps supports internal preparation and operational verification. It does not claim legal
+certainty, sign declarations, make commercial decisions, fabricate GeBIZ integrations, reassign
+people, contact partners, withdraw bids, or submit tenders. Final tender interpretation, staffing,
+commercial decisions, and submission remain the supplier's responsibility.
 
 ## Known limitations
 
@@ -309,6 +357,12 @@ BidOps supports internal preparation and operational verification. It does not c
   GeBIZ connection or automatic submission path.
 - The HTTP interpretation boundary accepts extracted page/section text. PDF upload and OCR are not
   part of this frozen MVP.
+- The portfolio layer operates on supplied capability counts and dated demand windows. It is not a
+  named-person scheduler, and it does not infer staff assignments from calendars or HR systems.
+- Portfolio routes are deterministic counterfactuals, not recommendations. No pricing, margin,
+  award probability, market forecast, or automatic execution is implemented.
+- Capability-roadmap items aggregate only known gaps in the supplied opportunities. They indicate
+  which eligibility checks could be addressed; they do not predict wins, revenue, or startup growth.
 - Live Bedrock validation uses `amazon.nova-lite-v1:0` in `us-east-1`. The R17 demo change
   passed. The final known-regression run scored 6/7 exact requirement interpretations, 2/2
   corrigendum matches, 9/9 ambiguity decisions, and 8/9 final operational states. The frozen

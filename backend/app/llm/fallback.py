@@ -51,7 +51,8 @@ def _source(document: str, page: int, section: str, snippet: str) -> Requirement
     return RequirementSource(document=document, page=page, section=section, snippet=snippet)
 
 
-def _contains_model_directive(text: str) -> bool:
+def contains_model_directive(text: str) -> bool:
+    """Return True when untrusted source text contains model-directed instructions."""
     return bool(MODEL_DIRECTIVE_PATTERN.search(text))
 
 
@@ -79,7 +80,7 @@ def interpret_requirement_fallback(
                 )
             ]
         )
-    if _contains_model_directive(text):
+    if contains_model_directive(text):
         return RequirementInterpretationResult(
             requirements=[
                 StructuredRequirement(
@@ -144,7 +145,7 @@ def interpret_change_fallback(
     text = payload.text.strip()
     lower = text.lower()
     source = _source(payload.corrigendum_document, payload.page, payload.section, text)
-    if _contains_model_directive(text):
+    if contains_model_directive(text):
         return ChangeInterpretationResult(
             change_type="UNCHANGED",
             affected_stable_key=None,
@@ -157,11 +158,28 @@ def interpret_change_fallback(
             ),
             reason_summary="No change was applied because the source failed the fallback safety check.",
         )
+    context = f"{payload.section}\n{text}"
+    target_key_is_named = bool(
+        existing.stable_key
+        and re.search(
+            rf"(?<![A-Za-z0-9_-]){re.escape(existing.stable_key)}(?![A-Za-z0-9_-])",
+            text,
+            flags=re.IGNORECASE,
+        )
+    )
+    target_clauses = set(re.findall(r"\b\d+(?:\.\d+)+\b", existing.source.section))
+    source_clauses = set(re.findall(r"\b\d+(?:\.\d+)+\b", context))
+    quoted_segments = re.findall(r"[‘'\"]([^’'\"]{20,})[’'\"]", text)
+    existing_normalised = re.sub(r"\s+", " ", existing.text).strip().casefold()
+    deadline_only = bool(re.search(r"\b(deadline|closing|submission date|submit by)\b", lower))
     identifies_existing = bool(
-        (existing.stable_key and existing.stable_key.lower() in lower)
-        or existing.source.section.lower() in lower
-        or "clause 4.3" in lower
-        or (existing.certification and existing.certification.lower() in lower)
+        target_key_is_named
+        or (target_clauses.intersection(source_clauses) and not deadline_only)
+        or existing_normalised in re.sub(r"\s+", " ", text).strip().casefold()
+        or any(
+            re.sub(r"\s+", " ", segment).strip().casefold() in existing_normalised
+            for segment in quoted_segments
+        )
     )
     removed = bool(re.search(r"\b(deleted|removed|withdrawn|no longer required)\b", lower))
     if removed and identifies_existing:
@@ -211,7 +229,6 @@ def interpret_change_fallback(
             ),
         )
 
-    deadline_only = bool(re.search(r"\b(deadline|closing|submission date|submit by)\b", lower))
     if deadline_only and not identifies_existing:
         return ChangeInterpretationResult(
             change_type="UNCHANGED",

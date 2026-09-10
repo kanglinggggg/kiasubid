@@ -16,23 +16,30 @@ Confirm the initial screen shows `FEASIBLE`, `8 / 8`, `91%`, `LOW`, and **Interp
 fallback** unless a real Bedrock interpretation has already been persisted. Keep browser zoom at
 100% and the scenario on **Main corrigendum demo**.
 
-## Primary sequence (approximately 4:20)
+## Primary sequence (approximately 4:50)
 
 | Time | Click / action | Expected state | Speaking point |
 |---|---|---|---|
-| 0:00–0:30 | No click. Point to the title, countdown, and four metric cards. | `FEASIBLE`; Critical Gates `8 / 8`; Submission Coverage `91%`; Deadline Risk `LOW`. | “BidOps gives the supplier one operational truth: can we still submit safely, what proves it, and what must happen next?” |
-| 0:30–1:05 | Click requirement **R17** if it is not already selected. Expand its source/provenance area if collapsed. | “Minimum 3 CISSP-certified engineers”; three complete A/B/C evidence sets; source document, page 17, section 4.3, exact snippet. | “This is not a chat summary. R17 is a typed, source-linked gate backed by named evidence.” |
-| 1:05–1:25 | Briefly point to the Submission Coverage breakdown. | Visible 50% Requirements + 30% Evidence + 20% Tasks arithmetic. | “Coverage measures preparation completeness; it never overrides a mandatory gate.” |
-| 1:25–1:35 | Click **Apply Corrigendum #2** once. | The workflow moves through interpretation, versioning, evidence checks, and recovery planning. | “A natural-language amendment raises the minimum from three to four.” |
-| 1:35–2:20 | Wait for completion; point to the changed cards and Latest Change panel. | R17 `3 → 4`; v1 `SUPERSEDED`; v2 `PARTIAL`; `FEASIBLE → RECOVERABLE`; `7 / 8`; `84%`; `MEDIUM`. | “The old pass is retained as history but is no longer current. Deterministic logic finds a real gap and a viable recovery path.” |
-| 2:20–3:00 | In R17 detail, show Engineer D and recovery tasks. | CISSP `VERIFIED`; CV `STALE`; Availability `UNKNOWN`; R17 remains `PARTIAL`. Tasks request CV, confirm availability, update schedule, then re-run R17. | “A certificate alone is not enough. BidOps refuses to turn the gate green until all evidence and dependent actions are complete.” |
-| 3:00–3:25 | Point to the impact chain and click **Activity**. | Corrigendum → requirement change → superseded assessment → evidence shortfall → recovery; the audit trail records each step. | “We can show exactly what changed without pretending the model made the operational decision.” |
-| 3:25–3:50 | Close Activity. In **Scenario**, choose **BLOCKED · no fourth engineer**. | `BLOCKED`; understandable no-viable-recovery reason; coverage remains relatively high. | “This is not a system that always invents a recovery. One unrecoverable mandatory gate overrides a high completeness percentage.” |
-| 3:50–4:10 | Choose **UNCERTAIN · ambiguous clause**. | `UNCERTAIN`; human clarification / insufficient authoritative detail; no manufactured pass/fail. | “When the source is ambiguous, the safe answer is uncertainty—not hallucinated compliance.” |
-| 4:10–4:20 | Click the header reset icon. | Exact baseline state: `FEASIBLE / 8 / 8 / 91% / LOW`; no old change/tasks. | “And the complete demonstration resets to the same clean baseline in one click.” |
+| 0:00–0:25 | No click. Point to the title, countdown, and four metric cards. | `FEASIBLE`; Critical Gates `8 / 8`; Submission Coverage `91%`; Deadline Risk `LOW`. No portfolio claim is shown yet. | “BidOps gives the supplier one operational truth: can we still submit safely, what proves it, and what must happen next?” |
+| 0:25–0:55 | Click requirement **R17** if it is not already selected. Expand its source/provenance area if collapsed. | “Minimum 3 CISSP-certified engineers”; three complete A/B/C evidence sets; source document, page 17, section 4.3, exact snippet. | “R17 is a typed, source-linked gate. The model interprets the clause; it does not decide whether the bid passes.” |
+| 0:55–1:10 | Briefly point to the Submission Coverage breakdown. | Visible 50% Requirements + 30% Evidence + 20% Tasks arithmetic. | “Coverage measures preparation completeness; it never overrides a mandatory gate.” |
+| 1:10–1:20 | Click **Apply Corrigendum #2** once. | The workflow moves through interpretation, versioning, evidence checks, and recovery planning. | “A natural-language amendment raises the minimum from three to four.” |
+| 1:20–2:00 | Wait for completion; point to the changed cards and Latest Change panel. | R17 `3 → 4`; v1 `SUPERSEDED`; v2 `PARTIAL`; `FEASIBLE → RECOVERABLE`; `7 / 8`; `84%`; `MEDIUM`. | “The old pass remains as history but is no longer current. Deterministic rules find a recoverable bid-level gap.” |
+| 2:00–2:25 | In R17 detail, show Engineer D and the recovery tasks. | CISSP `VERIFIED`; CV `STALE`; Availability `UNKNOWN`; R17 remains `PARTIAL`. | “A certificate alone is not enough. Until the missing evidence and availability are resolved, this bid stays RECOVERABLE—not green.” |
+| 2:25–2:40 | In **Latest Change**, point to **Cross-bid impact · Synthetic demo**, then click **Compare 3 routes**. | The **Portfolio impact** drawer opens with **Simulation only** and **Synthetic demo** labels. | “The same validated change now becomes a dated capability-demand delta across two supplied opportunities.” |
+| 2:40–3:10 | Point to the state boundary and capacity cards. | Current bid `RECOVERABLE`; portfolio before change `RECOVERABLE`; portfolio after change `BLOCKED`; synthetic overlap 1 October–1 December 2026; three proven, four potential, five concurrent required, one shortfall. | “These are separate scopes. This tender may still recover, but continuing both pursuits needs five concurrent slots and only four have been identified.” |
+| 3:10–3:25 | Point to **Affected pursuits**. | Current tender requires four; fictional companion commitment requires one. | “The companion opportunity, service windows, capacity counts, and no-double-booking rule are synthetic demo assumptions—not GeBIZ or HR data.” |
+| 3:25–4:05 | Click each route: **Protect this tender**, **Protect existing commitment**, and **Verify external capacity**. | Each card shows the deterministic consequence for both pursuits. Partner remains `UNCERTAIN` and lists facts still required. | “These are counterfactual consequences, not recommendations. There is no price, margin, win probability, automatic staffing, withdrawal, or partner action here.” |
+| 4:05–4:25 | Scroll to **Capability next steps**, then expand **Assumptions and calculation**. | Known evidence/capacity gaps and the exact peak-demand rule are visible. | “For an early-stage supplier, this turns recurring known gaps into a capability discussion. It does not promise qualification, awards, or revenue.” |
+| 4:25–4:40 | Close the drawer and open **Activity**. | The audit trail records bid-level events from interpretation through status recomputation. | “The language model reads the change; deterministic code owns the calculations; the team owns the decision and every external action.” |
+| 4:40–4:50 | Close Activity and click the header reset icon. | Exact baseline state: `FEASIBLE / 8 / 8 / 91% / LOW`; no old change, tasks, or portfolio panel. | “The whole demonstration resets to the same clean baseline in one click.” |
 
 Optional closing line: “The LLM interprets language; deterministic rules control the bid state;
 people control the decision and submission.”
+
+If more time is available, use the **BLOCKED · no fourth engineer** and **UNCERTAIN · ambiguous
+clause** fixtures only as separate safety branches. Do not mix their states with the synthetic
+portfolio calculation.
 
 ## Live Bedrock variation
 
@@ -101,3 +108,11 @@ Invoke-RestMethod -Method Post http://127.0.0.1:8000/api/demo/reset | Out-Null
 ```
 
 Refresh if necessary and verify exactly `FEASIBLE / 8 / 8 / 91% / LOW` before continuing.
+
+### Portfolio panel missing or inconsistent
+
+The panel appears only after the main R17 corrigendum has been applied. Reset, select **Main
+corrigendum demo**, and apply the change once. Confirm the current bid still reads `RECOVERABLE`
+before opening **Compare 3 routes**. If the displayed capacity is not exactly three proven, four
+potential, five required, and one shortfall, do not improvise the claim; restart, reset, and rerun
+the tested fixture.

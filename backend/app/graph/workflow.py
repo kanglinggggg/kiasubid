@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.database import SessionLocal
-from app.enums import TaskPriority, TaskStatus
+from app.enums import AssessmentStatus, TaskPriority, TaskStatus
 from app.graph.state import BidState
 from app.llm.interpreter import TenderInterpreter
 from app.llm.schemas import (
@@ -265,7 +265,7 @@ def build_corrigendum_graph(
                 state["tender_id"],
                 "ASSESSMENT_UPDATED",
                 requirement.id,
-                f"R17 v2 reassessed as {result.status.value}: only three complete personnel evidence sets remain.",
+                f"R17 v2 reassessed as {result.status.value}: {result.reason}",
             )
             _activity(
                 session,
@@ -290,7 +290,11 @@ def build_corrigendum_graph(
             }
 
     def create_recovery_tasks(state: BidState) -> BidState:
-        if not state.get("recovery_candidate_ids"):
+        assessment_status = state.get("assessments", [{}])[0].get("status")
+        if (
+            assessment_status != AssessmentStatus.PARTIAL.value
+            or not state.get("recovery_candidate_ids")
+        ):
             return {"tasks": []}
         requirement_id = state["changed_requirement_id"]
         tasks = [

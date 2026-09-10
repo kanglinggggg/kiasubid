@@ -1,8 +1,12 @@
 # Deterministic calculation rules
 
-This document defines the exact policy implemented by GeBIZ BidOps. The API exposes the same inputs and intermediate values under `calculations` in every `GET /api/bids/{bid_id}` response.
+This document defines the exact policy implemented for the persistent, single-bid state in GeBIZ
+BidOps. The API exposes the same inputs and intermediate values under `calculations` in every
+`GET /api/bids/{bid_id}` response. The optional caller-supplied, read-only cross-bid calculation is
+specified separately in [Portfolio capability simulation](PORTFOLIO_SIMULATION.md).
 
-All calculations operate on the current SQLite state. Requirement history remains stored, but only the highest version of each `stable_key` participates in current-state calculations.
+The calculations in this document operate on the current SQLite state. Requirement history remains
+stored, but only the highest version of each `stable_key` participates in current-state calculations.
 
 ## Operational Feasibility
 
@@ -26,6 +30,7 @@ Finding a candidate record does not make an assessment satisfied. For R17, an em
 - the employee has a `VERIFIED` CISSP Evidence record;
 - the certificate remains valid at tender closing;
 - the employee has a `VERIFIED` current CV Evidence record;
+- employment status is `ACTIVE`;
 - availability is `AVAILABLE`.
 
 The API trace includes the unresolved requirement IDs, assessment states, linked recovery task IDs, and whether each recovery path is viable.
