@@ -50,8 +50,8 @@ describe("Bid Control Room", () => {
     render(<App />);
 
     expect(await screen.findByRole("heading", { name: bidFixture.bid.title })).toBeInTheDocument();
-    expect(screen.getByText("8 / 8")).toBeInTheDocument();
-    expect(screen.getByText("91%")).toBeInTheDocument();
+    expect(screen.getAllByText("8 / 8").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("91%").length).toBeGreaterThan(0);
     expect(screen.getByText(/Assessed 21 Aug 2026/i)).toBeInTheDocument();
     const amendmentButton = screen.getByRole("button", { name: /Review Corrigendum #2/i });
     expect(amendmentButton).toBeEnabled();

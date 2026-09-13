@@ -26,6 +26,7 @@ import {
   ScanSearch,
   Shield,
   ShieldAlert,
+  Sparkles,
   UserRoundCheck,
   Users,
   X,
@@ -236,7 +237,77 @@ function App() {
         </div>
       </nav>
 
-      <header className="bid-hero">
+      <section className="product-hero" aria-labelledby="product-hero-title">
+        <div className="product-hero-inner page-width">
+          <div className="product-hero-copy">
+            <span className="product-hero-eyebrow"><Sparkles size={14} /> AI procurement copilot</span>
+            <h1 id="product-hero-title">Turn every tender change into a decision your team can defend</h1>
+            <p>
+              KiasuBid connects tender clauses  company evidence  owners and deadlines so smaller
+              teams can move from uncertainty to a clear bid plan
+            </p>
+            <div className="product-hero-actions">
+              <button
+                className="product-hero-primary"
+                onClick={() => document.getElementById("bid-control-room")?.scrollIntoView({ behavior: "smooth" })}
+                type="button"
+              >
+                View bid control room <ArrowRight size={16} />
+              </button>
+              <button
+                className="product-hero-secondary"
+                onClick={() => {
+                  setTenderLabMode(null);
+                  setTenderLabOpen(true);
+                }}
+                type="button"
+              >
+                Open Tender Lab
+              </button>
+            </div>
+            <div className="product-hero-proof" aria-label="Decision model">
+              <span>Source-backed</span>
+              <i />
+              <span>Rules-evaluated</span>
+              <i />
+              <span>Human-approved</span>
+            </div>
+          </div>
+
+          <div className="product-hero-visual" aria-label="KiasuBid product overview">
+            <div className="hero-orbit hero-orbit-one" />
+            <div className="hero-orbit hero-orbit-two" />
+            <div className="hero-agent-chip hero-agent-compliance"><Shield size={14} /><span>Compliance</span></div>
+            <div className="hero-agent-chip hero-agent-commercial"><Gauge size={14} /><span>Commercial</span></div>
+            <div className="hero-agent-chip hero-agent-timeline"><CalendarClock size={14} /><span>Timeline</span></div>
+            <div className="hero-product-card">
+              <div className="hero-product-card-head">
+                <span><FileSearch size={16} /> Tender intelligence</span>
+                <em>LIVE WORKSPACE</em>
+              </div>
+              <div className="hero-product-card-body">
+                <div className="hero-product-score">
+                  <small>Bid readiness</small>
+                  <strong>91%</strong>
+                  <span><CheckCircle2 size={13} /> Evidence traced</span>
+                </div>
+                <div className="hero-product-gates">
+                  <div><span>Critical gates</span><strong>8 / 8</strong></div>
+                  <div><span>Decision</span><strong>FEASIBLE</strong></div>
+                  <div><span>Deadline risk</span><strong>LOW</strong></div>
+                </div>
+              </div>
+              <div className="hero-product-change">
+                <span><FileDiff size={15} /></span>
+                <div><small>New corrigendum</small><strong>Impact traced across the bid</strong></div>
+                <ArrowRight size={15} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <header className="bid-hero" id="bid-control-room">
         <div className="hero-grid-glow" />
         <div className="hero-content page-width">
           <div className="hero-main">
