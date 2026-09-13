@@ -94,7 +94,10 @@ Evidence Coverage =
   ÷ all Evidence Registry records for the company
 ```
 
-The MVP uses the synthetic single-company registry. Evidence status must equal `VERIFIED`; `STALE`, `MISSING`, and `UNVERIFIED` contribute zero.
+The persistent Bid Control Room demo uses a synthetic single-company Evidence Registry. Tender
+Lab's separately uploaded business-profile facts are stateless declarations and do not enter this
+coverage metric. Evidence status must equal `VERIFIED`; `STALE`, `MISSING`, and `UNVERIFIED`
+contribute zero.
 
 ### Task Coverage
 

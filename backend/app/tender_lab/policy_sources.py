@@ -31,20 +31,29 @@ OFFICIAL_POLICY_RULES = (
             "then attach implementation evidence for human review."
         ),
         publisher="Government Technology Agency of Singapore",
-        source_title="CloudSCAPE overview",
-        source_url=(
-            "https://v2.developer.tech.gov.sg/products/categories/cybersecurity/"
-            "cloudscape/overview"
-        ),
+        source_title="Government ICT&SS Control Catalog",
+        source_url="https://info.standards.tech.gov.sg/control-catalog/",
         supports=(
-            "GovTech publicly describes automated compliance monitoring for GCC workloads against IM8."
+            "GovTech publishes machine-readable control catalogues for several system risk profiles. "
+            "Controls may be requirements or guidelines depending on the selected system profile."
         ),
         limitation=(
-            "The public page is not the IM8 control text and cannot establish tender compliance. "
+            "This catalogue overview is not a complete IM8 assessment and cannot establish tender compliance. "
             "The exact tender-supplied clause remains authoritative."
         ),
         applicability_note="Only triggered when the supplied tender explicitly names IM8.",
         context_only=True,
+    ),
+    OfficialPolicyRule(
+        id="POLICY-PWM", title="Progressive Wage Model applicability",
+        tender_terms=("progressive wage model", "pwm", "occupational progressive wages"),
+        proposal_terms=("progressive wage model", "pwm", "occupational progressive wages"),
+        next_step="Identify the covered sector or occupation, contract-period wage schedule and training obligations. Attach the roster and cost assumptions for a qualified reviewer.",
+        publisher="Ministry of Manpower Singapore", source_title="Progressive Wage Model",
+        source_url="https://www.mom.gov.sg/employment-practices/progressive-wage-model",
+        supports="MOM provides wage and training requirements by covered sector and occupation, including occupational progressive wages for administrators and drivers.",
+        limitation="Not every ICT employee is covered by PWM. The exact role, coverage, dates and tender obligations must be checked; this screen does not calculate statutory payroll compliance.",
+        applicability_note="Triggered only by an explicit PWM reference in the supplied tender.",
     ),
     OfficialPolicyRule(
         id="POLICY-MTCS",
@@ -168,4 +177,4 @@ OFFICIAL_POLICY_RULES = (
 
 
 POLICY_PACK_ID = "SG-OFFICIAL-PUBLIC-CONTEXT"
-POLICY_PACK_VERSION = "2026-09-09"
+POLICY_PACK_VERSION = "2026-09-12"

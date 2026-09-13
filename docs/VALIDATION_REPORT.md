@@ -1,8 +1,46 @@
 # Validation report
 
-Latest extension pass: 8 September 2026 (Asia/Singapore)
+Latest extension pass: 13 September 2026 (Asia/Singapore)
 
 Original full pre-freeze pass: 2 September 2026 (Asia/Singapore)
+
+## Proposal-to-website feature alignment — 13 September 2026
+
+The selected Startup functions from the teammate branch were integrated into the current BidOps
+architecture without replacing the newer Agent Room, corrigendum workflow, or control-room state.
+The integrated path now includes an eight-question mentor (seven required answers and one optional
+social-value answer), grounded critique and draft generation, five-agent evidence review, a
+source-linked structured tender brief, early company-fit screening, criterion-gated quality advice,
+curated official-source guidance retrieval, bounded readiness recommendations, milestone exports,
+and an expanded human-review report. Selectable-text DOCX extraction now reads content-control
+wrapped body and table content. The old parallel control room and Google Calendar OAuth
+implementation were not merged.
+
+Fresh results from this tree:
+
+| Check | Result |
+|---|---:|
+| Ruff | PASS |
+| Backend pytest | 177 passed |
+| Proposal, readiness, DOCX, and agent regressions | PASS as part of the full backend suite |
+| Frontend Vitest | 23 passed in 6 files |
+| TypeScript and Vite production build | PASS; 1,679 modules transformed |
+| Real supplied RFQ DOCX extraction | PASS; content-control rows and proposal sections recovered |
+| Browser flow | PASS; 8/8 interview, safe fallback draft, five-agent handoff, social-value gating |
+| Browser console | 0 product errors; one transient Vite HMR reconnect recovered automatically |
+
+The browser run used the real Vite/FastAPI UI. It verified all eight Proposal Studio steps,
+independent maintenance and risk prompts, the five logical Agent Room roles, milestone labels,
+bounded recommendation language, and that social-value advice is not presented as a scoring claim
+when the supplied evaluation criteria do not support one. The configured temporary Bedrock
+credential had expired, so the live call failed closed and the interface displayed `FALLBACK`; the
+deterministic mentor and draft path completed without exposing the raw provider error. This
+validates fallback honesty and continuity, not live-model quality. A fresh authorized token is still
+required before claiming a live Proposal Studio run. The report-download browser click path is
+covered by frontend unit tests; the in-app browser harness did not expose a blob-download event.
+
+The generated proposal remains preparation material. It is not an eligibility decision, compliance
+certification, pricing recommendation, buyer-acceptance prediction, or submission action.
 
 ## Portfolio extension and bid-assessment hardening — 8 September 2026
 
@@ -352,8 +390,8 @@ recovery artifacts.
 - Duplicate corrigendum: 409, no duplicate versions/tasks/events.
 - Empty text: safe `UNCERTAIN` fallback.
 - Invalid structured provider output: retry then graceful failure/fallback in tests.
-- Malformed PDF: not applicable; this frozen MVP accepts extracted page/section text and has no PDF
-  upload/OCR endpoint.
+- Corrupt DOCX input fails closed with a typed extraction error. PDF and DOCX intake require
+  selectable text; image-only documents still need an external OCR step.
 
 Approximate local UI timings:
 
@@ -404,7 +442,10 @@ reported zero unsafe-green errors; no score was manufactured.
   historical blind-v1 first run remains 2/8 and was not used for this round's prompt/model
   selection or rerun afterward. Human review and a genuinely sealed blind-v2 evaluation remain
   mandatory.
-- PDF upload/OCR and multi-user production hardening are intentionally outside the frozen MVP.
+- OCR, direct live GeBIZ tender-document retrieval, live ACRA registry verification, authenticated
+  calendar synchronization, reliable DOCX pagination, and multi-user production hardening remain
+  outside the MVP. Guidance retrieval is local and summary-based; public award retrieval is a
+  separate descriptive data.gov.sg query with a labelled cached fallback.
 
 ## Final readiness classification
 

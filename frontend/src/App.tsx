@@ -4,15 +4,18 @@ import {
   ArrowDown,
   ArrowRight,
   BadgeCheck,
+  BriefcaseBusiness,
   CalendarClock,
   Check,
   CheckCircle2,
+  ChevronDown,
   CircleDot,
   Clock3,
   Database,
   FileDiff,
   FileSearch,
   Gauge,
+  GraduationCap,
   History,
   Info,
   ListChecks,
@@ -91,7 +94,10 @@ function App() {
   const [activityOpen, setActivityOpen] = useState(false);
   const [portfolioOpen, setPortfolioOpen] = useState(false);
   const [tenderLabOpen, setTenderLabOpen] = useState(false);
+  const [tenderLabMode, setTenderLabMode] = useState<"SME" | "STARTUP" | null>(null);
+  const [tenderLabMenuOpen, setTenderLabMenuOpen] = useState(false);
   const [amendmentOpen, setAmendmentOpen] = useState(false);
+  const [scenarioOpen, setScenarioOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [changed, setChanged] = useState(false);
 
@@ -150,10 +156,8 @@ function App() {
   if (loading) {
     return (
       <main className="loading-screen">
-        <div className="brand-mark brand-mark-large">
-          <Shield size={25} />
-        </div>
-        <strong>GeBIZ BidOps</strong>
+        <img className="brand-logo brand-logo-loading" src="/kiasubid-mark.jpg" alt="KiasuBid" />
+        <strong>KiasuBid AI</strong>
         <span>Loading bid state</span>
         <LoaderCircle className="spin" size={20} />
       </main>
@@ -190,44 +194,113 @@ function App() {
     <div className="app-shell">
       <nav className="topbar">
         <div className="brand-lockup">
-          <span className="brand-mark">
-            <Shield size={18} />
+          <span className="brand-wordmark" aria-label="KiasuBid AI">
+            <img src="/kiasubid-wordmark.jpg" alt="KiasuBid AI" />
           </span>
-          <div>
-            <strong>GeBIZ BidOps</strong>
-            <small>Supplier-side bid control</small>
-          </div>
         </div>
         <div className="topbar-context">
-          <span
-            className={`synthetic-badge interpretation-${data.interpretation.mode.toLowerCase()}`}
-            title={
-              data.interpretation.model_id
-                ? `Live model: ${data.interpretation.model_id}`
-                : "Built-in demo interpretation"
-            }
-          >
-            <FileSearch size={12} /> Interpretation: {data.interpretation.label}
-          </span>
           <span className="company-context">{data.company.name}</span>
-          <label className="scenario-switcher" title={activeFixture?.description}>
-            <span>Scenario</span>
-            <select
+          <div
+            className={`scenario-switcher ${scenarioOpen ? "is-open" : ""}`}
+            title={activeFixture?.description}
+            onMouseLeave={() => setScenarioOpen(false)}
+            onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                setScenarioOpen(false);
+              }
+            }}
+          >
+            <button
+              className="scenario-trigger"
+              type="button"
               aria-label="Select demo scenario"
-              value={data.bid.fixture_id}
+              aria-haspopup="menu"
+              aria-expanded={scenarioOpen}
               disabled={mutating}
-              onChange={(event) => void loadFixture(event.target.value)}
+              onClick={() => setScenarioOpen((current) => !current)}
             >
-              {fixtures.map((fixture) => (
-                <option key={fixture.id} value={fixture.id}>
-                  {fixture.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button className="nav-button tender-lab-nav" onClick={() => setTenderLabOpen(true)}>
-            <ScanSearch size={16} /> Tender Lab
-          </button>
+              <span>
+                <small>Scenario</small>
+                <strong>{activeFixture?.label ?? "Choose scenario"}</strong>
+              </span>
+              <ChevronDown size={14} />
+            </button>
+            <div className="scenario-menu" role="menu" aria-label="Demo scenarios">
+              <small>Switch demo state</small>
+              {fixtures.map((fixture) => {
+                const active = fixture.id === data.bid.fixture_id;
+                return (
+                  <button
+                    key={fixture.id}
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={active}
+                    className={active ? "active" : ""}
+                    disabled={mutating}
+                    onClick={() => {
+                      setScenarioOpen(false);
+                      if (!active) void loadFixture(fixture.id);
+                    }}
+                  >
+                    <span>
+                      <strong>{fixture.label}</strong>
+                      <small>{fixture.description}</small>
+                    </span>
+                    <em>{fixture.expected_status}</em>
+                    {active && <Check size={13} />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div
+            className={`tender-lab-switcher ${tenderLabMenuOpen ? "is-open" : ""}`}
+            onMouseLeave={() => setTenderLabMenuOpen(false)}
+            onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                setTenderLabMenuOpen(false);
+              }
+            }}
+          >
+            <button
+              className="nav-button tender-lab-nav"
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded={tenderLabMenuOpen}
+              onClick={() => setTenderLabMenuOpen((current) => !current)}
+            >
+              <ScanSearch size={16} /> Tender Lab <ChevronDown size={13} />
+            </button>
+            <div className="tender-lab-nav-menu" role="menu" aria-label="Tender Lab workspaces">
+              <small>Open workspace</small>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setTenderLabMenuOpen(false);
+                  setTenderLabMode("SME");
+                  setTenderLabOpen(true);
+                }}
+              >
+                <span><BriefcaseBusiness size={16} /></span>
+                <span><strong>SME Bid Room</strong><small>Bid fit  compliance  commercial review</small></span>
+                <ArrowRight size={13} />
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setTenderLabMenuOpen(false);
+                  setTenderLabMode("STARTUP");
+                  setTenderLabOpen(true);
+                }}
+              >
+                <span className="startup"><GraduationCap size={16} /></span>
+                <span><strong>Startup Proposal Studio</strong><small>Understand  practise  build proposal</small></span>
+                <ArrowRight size={13} />
+              </button>
+            </div>
+          </div>
           <button className="nav-button" onClick={() => setActivityOpen(true)}>
             <Activity size={16} /> Activity
             <span>{data.activity_events.length}</span>
@@ -264,6 +337,9 @@ function App() {
             </strong>
             <small>
               <CalendarClock size={13} /> {formatDate(data.bid.closing_at)}
+            </small>
+            <small>
+              <Clock3 size={13} /> Scenario clock {formatDate(data.calculations.deadline_risk.calculated_at)}
             </small>
           </div>
           <div className="hero-action">
@@ -363,58 +439,66 @@ function App() {
           />
         </section>
 
-        <section className="panel coverage-breakdown">
-          <div className="coverage-heading">
+        <details className="panel coverage-breakdown disclosure-panel">
+          <summary className="coverage-heading disclosure-summary">
             <div>
-              <span className="eyebrow">How the score is built</span>
-              <h2>Submission Coverage</h2>
+              <span className="coverage-summary-icon"><Gauge size={16} /></span>
+              <span>
+                <span className="eyebrow">Transparent score</span>
+                <h2>How the {coverage.display_percent}% coverage score is built</h2>
+              </span>
             </div>
-            <span className="trace-badge">
-              <CheckCircle2 size={13} /> Calculated from current bid data
+            <span className="disclosure-summary-side">
+              <span className="trace-badge">
+                <CheckCircle2 size={13} /> Traceable
+              </span>
+              <ChevronDown size={16} />
             </span>
-          </div>
-          <div className="coverage-components">
-            {(
-              [
-                ["requirements", Shield],
-                ["evidence", Database],
-                ["tasks", ListChecks],
-              ] as const
-            ).map(([key, Icon]) => {
-              const component = coverage.components[key];
-              return (
-                <article className="coverage-component" key={key} title={component.rule}>
-                  <span className="coverage-icon">
-                    <Icon size={15} />
-                  </span>
-                  <div>
-                    <strong>{component.label}</strong>
-                    <small>
-                      {component.completed_units} / {component.total_units} {component.unit_label}
-                    </small>
-                    <span className="coverage-track">
-                      <i style={{ width: `${component.percent}%` }} />
+          </summary>
+          <div className="disclosure-content">
+            <div className="coverage-components">
+              {(
+                [
+                  ["requirements", Shield],
+                  ["evidence", Database],
+                  ["tasks", ListChecks],
+                ] as const
+              ).map(([key, Icon]) => {
+                const component = coverage.components[key];
+                return (
+                  <article className="coverage-component" key={key} title={component.rule}>
+                    <span className="coverage-icon">
+                      <Icon size={15} />
                     </span>
-                  </div>
-                  <div className="coverage-math">
-                    <span>
-                      {component.percent}% × {component.weight * 100}%
-                    </span>
-                    <strong>{component.weighted_points} pts</strong>
-                  </div>
-                </article>
-              );
-            })}
+                    <div>
+                      <strong>{component.label}</strong>
+                      <small>
+                        {component.completed_units} / {component.total_units} {component.unit_label}
+                      </small>
+                      <span className="coverage-track">
+                        <i style={{ width: `${component.percent}%` }} />
+                      </span>
+                    </div>
+                    <div className="coverage-math">
+                      <span>
+                        {component.percent}% × {component.weight * 100}%
+                      </span>
+                      <strong>{component.weighted_points} pts</strong>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+            <div className="coverage-total">
+              <Info size={14} />
+              <span>{coverage.formula}</span>
+              <strong>
+                {coverage.raw_percent}% → {coverage.display_percent}%
+              </strong>
+            </div>
+            <p>{coverage.warning}</p>
           </div>
-          <div className="coverage-total">
-            <Info size={14} />
-            <span>{coverage.formula}</span>
-            <strong>
-              {coverage.raw_percent}% → {coverage.display_percent}%
-            </strong>
-          </div>
-          <p>{coverage.warning}</p>
-        </section>
+        </details>
 
         <section className="summary-grid">
           <article className="panel actions-panel">
@@ -634,21 +718,33 @@ function App() {
           </section>
         )}
 
-        <section className="requirements-layout">
-          <RequirementTable
-            requirements={data.requirements}
-            selectedId={selectedId}
-            onSelect={(requirement: Requirement) => setSelectedId(requirement.id)}
-          />
-          {selected && <RequirementDetail requirement={selected} />}
-        </section>
+        <details className="panel requirements-disclosure disclosure-panel">
+          <summary className="requirements-disclosure-summary disclosure-summary">
+            <span className="requirements-summary-icon"><ListChecks size={17} /></span>
+            <span>
+              <span className="eyebrow">Audit trail</span>
+              <strong>Requirement register and source evidence</strong>
+              <small>{data.requirements.length} tracked requirements  click to inspect R17 and every source</small>
+            </span>
+            <span className="requirements-summary-count">{metrics.critical_gates_verified}/{metrics.critical_gates_total} critical verified</span>
+            <ChevronDown size={17} />
+          </summary>
+          <div className="requirements-layout">
+            <RequirementTable
+              requirements={data.requirements}
+              selectedId={selectedId}
+              onSelect={(requirement: Requirement) => setSelectedId(requirement.id)}
+            />
+            {selected && <RequirementDetail requirement={selected} />}
+          </div>
+        </details>
 
       </main>
 
       <footer className="app-footer">
         <div className="page-width">
           <span>
-            <Shield size={14} /> GeBIZ BidOps
+            <Shield size={14} /> KiasuBid AI
           </span>
           <button onClick={() => setActivityOpen(true)}>
             <History size={14} /> View audit activity
@@ -669,7 +765,11 @@ function App() {
         bidStatus={metrics.operational_status}
       />
 
-      <TenderLabDrawer open={tenderLabOpen} onClose={() => setTenderLabOpen(false)} />
+      <TenderLabDrawer
+        open={tenderLabOpen}
+        initialMode={tenderLabMode}
+        onClose={() => setTenderLabOpen(false)}
+      />
 
       {amendmentOpen && (
         <AmendmentReviewDrawer

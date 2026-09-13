@@ -8,9 +8,10 @@ measured Bedrock results, and limitations that still need human review.
 ChatGPT can summarize prose and Excel can track rows, but neither combination automatically gives
 us stable requirement identities, immutable versions, evidence links, superseded assessments,
 dependency-aware recovery tasks, deterministic gate precedence, dated cross-opportunity demand, or
-a reproducible audit trail. BidOps uses an LLM only to translate tender language into validated
-structured data. Ordinary code then owns the operational calculation. The value is controlled state
-propagation, not a chat answer.
+a reproducible audit trail. BidOps gives the configured LLM bounded language tasks: requirement and
+change interpretation, proposal coaching, and evidence-grounded specialist review. Strict schemas
+and ordinary code validate those outputs and own every status, calculation, version, and action.
+The value is controlled state propagation, not a chat answer.
 
 Evidence to show: R17 v1 remains stored after the corrigendum, its assessment becomes
 `SUPERSEDED`, R17 v2 is created, and every visible metric exposes backend calculation details.
@@ -37,14 +38,23 @@ the feasibility card and unresolved-gate explanation show the blocking reason.
 
 ## What is actually Agentic AI here?
 
-BidOps is agentic in a narrow operational sense: it carries a change across the bid instead of
-returning a one-off chat answer. LangGraph coordinates requirement versioning, assessment
+BidOps is agentic in a narrow operational sense: it carries work across a controlled workflow
+instead of returning a one-off chat answer. LangGraph coordinates requirement versioning, assessment
 superseding, evidence rechecks, recovery planning, metric updates, and the audit trail. Every step
 reads and writes typed state and stops when the evidence is insufficient. The portfolio extension
 continues that chain from a validated clause change to a dated capability-demand delta, collision
 calculation, counterfactual options, human decision, and capability roadmap. Bedrock interprets the
 language; rules calculate bid and portfolio states; a person keeps every decision and external
 action.
+
+Tender Lab also has a bounded Agent Room with five logical agents: one planner, three fixed
+specialists (compliance, commercial, and timeline), and one critic. The critic checks every finding
+against named evidence IDs, and at most one revision round is allowed before ordinary code produces
+a human decision packet. The separate socio-economic and quality advisor is deterministic,
+tender-criteria-gated decision support—not a sixth agent. In Startup mode, Proposal Studio asks
+eight founder questions: seven required and one optional social-value question. Its preparation
+draft can become Agent Room proposal evidence, but neither workflow can browse, change files,
+contact anyone, approve, or submit.
 
 This is intentionally narrow agency: useful autonomy inside a controlled procurement workflow,
 not a bot that can decide or submit a bid on its own.
@@ -55,7 +65,11 @@ LLM-driven, when a configured provider succeeds:
 
 1. extracting typed requirements from supplied page/section text;
 2. interpreting a corrigendum as `ADDED`, `MODIFIED`, `REMOVED`, or `UNCHANGED`, matching a stable
-   requirement where possible, and listing changed fields.
+   requirement where possible, and listing changed fields;
+3. critiquing the eight recorded Proposal Studio answers and drafting grounded sections from the
+   seven required answers, with the social-value answer optional; and
+4. producing the bounded Agent Room planner, compliance, commercial, timeline, and critic reviews
+   against named evidence IDs, with no more than one revision round.
 
 Deterministic:
 
@@ -67,7 +81,11 @@ Deterministic:
 - Critical Gates, Submission Coverage, recovery tasks, dependencies, and Deadline Risk;
 - peak capability demand across supplied overlapping service windows, portfolio-state precedence,
   counterfactual route outcomes, and known-gap roadmap items;
-- duplicate-corrigendum protection and persistence.
+- duplicate-corrigendum protection and persistence;
+- tender-triggered lexical retrieval over the local versioned guidance-summary corpus;
+- company-fit screening, ACRA-profile field parsing, and tender-criteria-gated quality suggestions;
+- price and margin sensitivity arithmetic, award-sample statistics, milestone extraction, and
+  calendar export.
 
 Human-controlled: source completeness, ambiguous-clause clarification, evidence verification,
 staffing and partner facts, route selection, commercial judgment, final approval, and GeBIZ
@@ -122,14 +140,17 @@ concurrent shortfall, followed by the unresolved evidence/availability for one p
 
 For a startup or early-stage supplier, this can frame a concrete capability-development discussion:
 which known eligibility gaps recur in its selected opportunity set. It is not a training plan,
-hiring instruction, proposal generator, or forecast that an investment will produce an award or
-revenue.
+hiring instruction, or forecast that an investment will produce an award or revenue. The separate
+Proposal Studio can create a bounded preparation draft from recorded founder answers; the roadmap
+itself does not generate that draft.
 
 ## Does BidOps predict price or the chance of winning?
 
-No. This build has no verified market dataset, pricing model, margin optimiser, or award-probability
-model. The portfolio routes compare operational capacity consequences only. We do not infer agency
-preferences or claim that historical prices determine a future award.
+No. Award History can query public data.gov.sg/MOF GeBIZ awarded-record data and calculate
+descriptive award-price ranges and recurring-supplier observations for the returned records. It
+does not have comparable losing bids, complete scope similarity, evaluator comments, or agency
+scoring weights, so it produces no recommended bid price, win probability, or agency-preference
+claim. User-entered cost scenarios are deterministic sensitivity checks, not predictions.
 
 ## Is the portfolio capability unique?
 
@@ -235,13 +256,23 @@ sealed evaluation.
 - The demo uses synthetic tender, company, evidence, and personnel data.
 - The portfolio companion opportunity, service windows, capability counts, and no-double-booking
   assumption are synthetic. The simulator is aggregate and does not schedule named people.
-- Input is extracted page/section text; PDF upload, OCR, and live GeBIZ retrieval are outside scope.
+- Tender Lab accepts selectable-text PDF, DOCX, TXT, and Markdown uploads in memory. OCR and direct
+  GeBIZ tender-document retrieval remain outside scope, and DOCX page numbers are not treated as
+  reliable. Award History is a separate public awarded-record connector, not tender retrieval.
+- Policy guidance is tender-triggered lexical retrieval over a small, versioned corpus of curated
+  official-source summaries; it is not live policy lookup, the full manuals, or legal advice.
+- The ACRA importer reads explicit facts from a user-supplied selectable-text profile. It performs
+  no live registry verification, does not infer official EPU/SCA/GSR grades, and cannot establish
+  eligibility or delivery capability.
+- Calendar support is local `.ics` export and prefilled Google Calendar pages, not account
+  authentication, background synchronization, or automated reminders.
 - Extraction completeness remains below release quality and still requires human review and
   broader independent evaluation.
 - SQLite and the local single-user process are demonstration architecture, not production
   multi-user deployment.
-- There is no authentication, proposal generation, pricing or margin optimisation, award
-  probability, competitor intelligence, staff allocation, partner outreach, automatic bid
-  withdrawal, or automatic submission.
+- There is no authentication, autonomous proposal completion, recommended pricing or margin
+  optimisation, award probability, agency-preference model, staff allocation, partner outreach,
+  automatic bid withdrawal, or automatic submission. Proposal Studio outputs a labelled
+  human-review draft only.
 - The capability roadmap addresses known gaps in the supplied opportunity set; it does not predict
   qualification, awards, revenue, or startup growth.

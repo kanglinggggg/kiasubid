@@ -46,13 +46,13 @@ describe("Bid Control Room", () => {
     ]);
   });
 
-  it("renders the deterministic hero state and honest fallback label", async () => {
+  it("renders the deterministic hero state", async () => {
     render(<App />);
 
     expect(await screen.findByRole("heading", { name: bidFixture.bid.title })).toBeInTheDocument();
-    expect(screen.getByText("Interpretation: Demo fallback")).toBeInTheDocument();
     expect(screen.getByText("8 / 8")).toBeInTheDocument();
     expect(screen.getByText("91%")).toBeInTheDocument();
+    expect(screen.getByText(/Scenario clock 21 Aug 2026/i)).toBeInTheDocument();
     const amendmentButton = screen.getByRole("button", { name: /Review Corrigendum #2/i });
     expect(amendmentButton).toBeEnabled();
     expect(screen.queryByRole("button", { name: /Compare .* routes/i })).not.toBeInTheDocument();
@@ -109,7 +109,7 @@ describe("Bid Control Room", () => {
     expect(screen.getByText(/does not use market prices, calculate win probability/i)).toBeInTheDocument();
   });
 
-  it("shows Groq only when the returned backend state records Groq", async () => {
+  it("keeps provider metadata out of the recording-first navigation", async () => {
     mocks.get.mockResolvedValue({
       ...bidFixture,
       interpretation: {
@@ -122,10 +122,8 @@ describe("Bid Control Room", () => {
     });
     render(<App />);
 
-    expect(await screen.findByText("Interpretation: Groq")).toHaveAttribute(
-      "title",
-      "Live model: configured/model",
-    );
+    expect(await screen.findByRole("heading", { name: bidFixture.bid.title })).toBeInTheDocument();
+    expect(screen.queryByText(/Interpretation:/i)).not.toBeInTheDocument();
   });
 
   it("surfaces a backend startup failure instead of rendering stale values", async () => {

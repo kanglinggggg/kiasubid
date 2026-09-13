@@ -9,6 +9,7 @@ from app.tender_lab.policy_sources import (
     POLICY_PACK_VERSION,
 )
 from app.tender_lab.schemas import (
+    BriefClause,
     ClarificationQuestion,
     CoachFinding,
     Milestone,
@@ -202,9 +203,20 @@ def _sentences_with_locations(text: str) -> list[LocatedSentence]:
         if page_match:
             page = f"Page {page_match.group(1)}"
             segment = segment[page_match.end() :]
-        for sentence in re.split(r"(?<=[.!?])\s+|\n{2,}|(?<=:)\s+(?=[A-Z0-9])", segment):
+        # A single newline is commonly only PDF/DOCX line wrapping. Keep it inside the
+        # sentence so labels such as "Clarification questions\nmust be submitted ..."
+        # retain their meaning. Known standalone headings become their own block, while
+        # labels such as "Sustainability: 10 percent" stay attached to their criterion.
+        segment = re.sub(
+            r"(?im)^\s*(evaluation criteria|payment terms|deliverables|technical requirements|"
+            r"functional requirements|contract conditions|terms and conditions|milestones|"
+            r"project phases)\s*:?\s*$",
+            r"\n\n\1:\n\n",
+            segment,
+        )
+        for sentence in re.split(r"(?<=[.!?])\s+|\n{2,}", segment):
             cleaned = _normalise_space(sentence)
-            if len(cleaned) >= 12:
+            if len(cleaned) >= 3:
                 result.append(LocatedSentence(cleaned, page))
     if not result and _normalise_space(text):
         result.append(LocatedSentence(_normalise_space(text), page))
@@ -219,6 +231,36 @@ def _find_sentence(
         if any(term.casefold() in lowered for term in terms):
             return sentence
     return None
+
+
+def _response_status(sentences: list[LocatedSentence], terms: tuple[str, ...]):
+    """Conservative text evidence check, including contradictions anywhere in the draft.
+
+    Never interpret a keyword alone as proof of implementation. This is intentionally
+    a screen: future commitments, exceptions and negation are sent to human review.
+    """
+    matches = [s for s in sentences if any(re.search(r"(?<!\w)" + re.escape(t) + r"(?!\w)", s.text, re.I) for t in terms)]
+    if not matches:
+        return "GAP", None
+    for s in matches:
+        if re.search(
+            r"\b(open item|missing|unverified|not verified|evidence needed|provide and verify|"
+            r"needs? (?:evidence|review|confirmation)|requires? (?:evidence|review|confirmation))\b",
+            s.text,
+            re.I,
+        ):
+            return "REVIEW", s
+        if re.search(r"\b(not|never|cannot|can't|don't|doesn't|won't|without|lack\w*|except\w*|exclud\w*|no)\b", s.text, re.I):
+            return "REVIEW", s
+        if re.search(r"\b(plan\w*|propos\w*|intend\w*|will|would|may|might|pending|tbc|tbd)\b|\[[^]]+\]", s.text, re.I):
+            return "REVIEW", s
+    return "SUPPORTED", matches[0]
+
+
+def _mandatory(text: str) -> bool:
+    return bool(re.search(r"\b(must|shall|required|compulsory|mandatory)\b", text, re.I)) and not bool(
+        re.search(r"\b(not required|not mandatory|not compulsory|need not|no requirement)\b", text, re.I)
+    )
 
 
 def _source(payload: TenderLabRequest, sentence: LocatedSentence) -> SourceReference:
@@ -285,13 +327,13 @@ def build_brief(payload: TenderLabRequest) -> TenderBrief:
     mandatory = [
         _clip(item.text, 220)
         for item in sentences
-        if re.search(r"\b(must|shall|required|compulsory|mandatory)\b", item.text, re.I)
-    ][:6]
+        if _mandatory(item.text)
+    ]
     outcomes = [
         _clip(item.text, 220)
         for item in sentences
         if re.search(r"\b(deliver|provide|implement|operate|maintain|support|develop)\w*\b", item.text, re.I)
-    ][:5]
+    ]
     if not outcomes:
         outcomes = [_clip(item.text, 220) for item in sentences[:3]]
     short_objective = _clip(objective, 300)
@@ -302,27 +344,79 @@ def build_brief(payload: TenderLabRequest) -> TenderBrief:
         plain += " before the team invests in a full response."
     else:
         plain += "No explicit mandatory wording was detected, so the original source still needs manual review."
+    categories = {
+        "Functions": r"\b(function\w*|feature\w*|system|platform|software|integrat\w*|api|architect\w*|scalab\w*)\b",
+        "Deliverables": r"\b(deliver\w*|provide|implement\w*|develop\w*|report\w*|training|documentation)\b",
+        "Evaluation criteria": r"\b(evaluat\w*|scor\w*|weight\w*|assessment criteria|selection criteria)\b",
+        "Payment": r"\b(pay\w*|invoice\w*|deposit|bond|retention|financial milestone)\b",
+        "Phases and milestones": r"\b(phase\w*|stage\w*|milestone\w*|uat|acceptance|go-live|deadline|submission|briefing|clarification|closing)\b",
+        "Contract conditions": r"\b(liabilit\w*|indemn\w*|termination|warrant\w*|penalt\w*|intellectual property|maintenance|service level|contract period|subcontract\w*)\b",
+    }
+    clauses = []
+    active_section = None
+    for index, item in enumerate(sentences, 1):
+        labels = [name for name, pattern in categories.items() if re.search(pattern, item.text, re.I)]
+        heading = re.sub(r"^[\d.\s#-]+|[:\s]+$", "", item.text).casefold()
+        section_names = {
+            "evaluation criteria": "Evaluation criteria", "evaluation": "Evaluation criteria",
+            "payment terms": "Payment", "payment": "Payment", "deliverables": "Deliverables",
+            "technical requirements": "Functions", "functional requirements": "Functions",
+            "contract conditions": "Contract conditions", "terms and conditions": "Contract conditions",
+            "milestones": "Phases and milestones", "project phases": "Phases and milestones",
+        }
+        if heading in section_names:
+            active_section = section_names[heading]
+            continue
+        if active_section and active_section not in labels:
+            labels.append(active_section)
+        if item.text.endswith(":") and heading not in section_names:
+            active_section = None
+        if _mandatory(item.text):
+            labels.insert(0, "Mandatory requirements")
+        if not labels:
+            continue
+        plain_text = item.text
+        for pattern, replacement in (
+            (r"\bshall\b", "must"), (r"\bprior to\b", "before"),
+            (r"\bcommencement\b", "start"), (r"\bremuneration\b", "payment"),
+            (r"\bpursuant to\b", "under"), (r"\bforthwith\b", "immediately"),
+        ):
+            plain_text = re.sub(pattern, replacement, plain_text, flags=re.I)
+        clauses.append(BriefClause(
+            id=f"REQ-{index:03}", categories=labels, plain_language=plain_text,
+            source=SourceReference(source_label=payload.source_label, location=item.location, excerpt=item.text),
+        ))
     return TenderBrief(
         objective=short_objective,
         plain_language_summary=plain,
         mandatory_signals=mandatory,
         requested_outcomes=outcomes,
+        clauses=clauses,
+        missing_sections=[label for label in categories if not any(label in c.categories for c in clauses)],
     )
 
 
 def scan_policy_checks(payload: TenderLabRequest) -> list[PolicyCheck]:
     tender_sentences = _sentences_with_locations(payload.tender_text)
-    proposal_sentences = _sentences_with_locations(payload.proposal_text)
+    proposal_text = re.sub(
+        r"<!--\s*KIASUBID:OPEN_ITEMS_START\s*-->.*?<!--\s*KIASUBID:OPEN_ITEMS_END\s*-->",
+        "",
+        payload.proposal_text,
+        flags=re.I | re.S,
+    )
+    proposal_text = re.split(
+        r"(?im)^#{1,6}\s*Open Items for Human Review\s*$",
+        proposal_text,
+        maxsplit=1,
+    )[0]
+    proposal_sentences = _sentences_with_locations(proposal_text)
     findings: list[PolicyCheck] = []
     for rule in CONTROL_RULES:
         tender_match = _find_sentence(tender_sentences, rule.tender_terms)
         if tender_match is None:
             continue
-        proposal_match = _find_sentence(proposal_sentences, rule.proposal_terms)
-        is_mandatory = bool(
-            re.search(r"\b(must|shall|required|compulsory|mandatory)\b", tender_match.text, re.I)
-        )
-        status = "SUPPORTED" if proposal_match else "GAP"
+        status, proposal_match = _response_status(proposal_sentences, rule.proposal_terms)
+        is_mandatory = _mandatory(tender_match.text)
         findings.append(
             PolicyCheck(
                 id=rule.id,
@@ -332,6 +426,8 @@ def scan_policy_checks(payload: TenderLabRequest) -> list[PolicyCheck]:
                 rationale=(
                     "The draft contains a matching implementation statement. The reviewer must still confirm "
                     "that the statement and evidence satisfy the supplied tender wording."
+                    if status == "SUPPORTED"
+                    else "The draft mentions this control with a qualification, negation or future commitment. Check scope and implementation evidence; it is not established support."
                     if proposal_match
                     else "The supplied tender names this control, but no matching statement was found in the draft."
                 ),
@@ -345,7 +441,7 @@ def scan_policy_checks(payload: TenderLabRequest) -> list[PolicyCheck]:
                         tender_source=_source(payload, tender_match),
                         next_step=rule.next_step,
                     )
-                    if proposal_match is None
+                    if status != "SUPPORTED"
                     else None
                 ),
             )
@@ -355,9 +451,7 @@ def scan_policy_checks(payload: TenderLabRequest) -> list[PolicyCheck]:
         if tender_match is None:
             continue
         proposal_match = _find_sentence(proposal_sentences, rule.proposal_terms)
-        is_mandatory = bool(
-            re.search(r"\b(must|shall|required|compulsory|mandatory)\b", tender_match.text, re.I)
-        )
+        is_mandatory = _mandatory(tender_match.text)
         if proposal_match is None and is_mandatory:
             status = "GAP"
             rationale = (
@@ -389,7 +483,7 @@ def scan_policy_checks(payload: TenderLabRequest) -> list[PolicyCheck]:
                     publisher=rule.publisher,
                     title=rule.source_title,
                     url=rule.source_url,
-                    reviewed_on="2026-09-09",
+                    reviewed_on="2026-09-12" if rule.id in {"POLICY-IM8", "POLICY-PWM"} else "2026-09-09",
                     supports=rule.supports,
                     limitation=rule.limitation,
                 ),
@@ -516,6 +610,8 @@ def _milestone_label(sentence: str) -> tuple[str, str]:
         return "Presentation or evaluation", "REVIEW"
     if any(term in lowered for term in ("bond", "guarantee", "deposit")):
         return "Financial instrument deadline", "REVIEW"
+    if any(term in lowered for term in ("delivery", "go-live", "acceptance", "commencement", "phase", "uat")):
+        return "Delivery milestone", "REVIEW"
     return "Tender milestone", "REVIEW"
 
 
@@ -528,6 +624,8 @@ def extract_milestones(payload: TenderLabRequest) -> list[Milestone]:
             if parsed is None:
                 continue
             label, confidence = _milestone_label(sentence.text)
+            if not match.group("time"):
+                confidence = "REVIEW"
             key = (label, parsed.isoformat())
             if key in seen:
                 continue
@@ -541,7 +639,7 @@ def extract_milestones(payload: TenderLabRequest) -> list[Milestone]:
                     tender_source=_source(payload, sentence),
                 )
             )
-    return sorted(milestones, key=lambda item: item.starts_at)[:12]
+    return sorted(milestones, key=lambda item: item.starts_at)
 
 
 def analyse_pricing(payload: TenderLabRequest) -> PricingAnalysis | None:
@@ -733,15 +831,33 @@ def build_startup_coach(
     answers = payload.startup_answers
     values = {
         "Solution": answers.solution_summary if answers else "",
+        "Architecture and scale": answers.technical_architecture if answers else "",
         "Delivery": answers.delivery_approach if answers else "",
+        "Operations and maintenance": answers.operations_maintenance if answers else "",
         "Security": answers.security_approach if answers else "",
+        "Risk management": answers.risk_management if answers else "",
         "Team": answers.team_strength if answers else "",
-        "Social value": answers.social_value if answers else "",
     }
+    brief = build_brief(payload)
+    social_criterion_found = any(
+        "Evaluation criteria" in clause.categories
+        and re.search(
+            r"\b(sustainab\w*|environment\w*|social impact|social value|workforce|"
+            r"skillsfuture|accessib\w*)\b",
+            clause.source.excerpt,
+            re.I,
+        )
+        for clause in brief.clauses
+    )
+    if social_criterion_found:
+        values["Social value"] = answers.social_value if answers else ""
     prompts = {
         "Solution": "Explain the user problem, measurable outcome and why the proposed approach fits this tender.",
+        "Architecture and scale": "Explain components, data flow, integrations and how unknown or expected volumes will be handled.",
         "Delivery": "Describe phases, milestones, acceptance evidence and who owns each hand-off.",
+        "Operations and maintenance": "Describe post-go-live support, maintenance, monitoring, escalation and service evidence.",
         "Security": "Name concrete controls, operational evidence and the incident owner.",
+        "Risk management": "Name tender-specific risks, owners, mitigations, triggers and unresolved dependencies.",
         "Team": "Map named roles and past proof to the work packages they will deliver.",
         "Social value": "State a credible local, workforce or sustainability outcome and how it will be measured.",
     }
@@ -772,12 +888,28 @@ def build_startup_coach(
             evidence_needed=["Tender outcome reference", "Measurable success metric"],
         ),
         ProposalSection(
+            title="Technical architecture and scale",
+            draft=(
+                _normalise_space(values["Architecture and scale"])
+                or "Describe components, data flow, integrations, scale assumptions and test evidence."
+            ),
+            evidence_needed=["Architecture diagram", "Integration inventory", "Scale assumptions and test evidence"],
+        ),
+        ProposalSection(
             title="Delivery and acceptance",
             draft=(
                 _normalise_space(values["Delivery"])
                 or "Define delivery phases, acceptance evidence, owners and dependencies."
             ),
             evidence_needed=["Milestone plan", "Acceptance artefact list", "Named delivery owner"],
+        ),
+        ProposalSection(
+            title="Operations and maintenance",
+            draft=(
+                _normalise_space(values["Operations and maintenance"])
+                or "Define support, maintenance, monitoring, escalation and reporting after go-live."
+            ),
+            evidence_needed=["Support model", "Maintenance plan", "Service-report example"],
         ),
         ProposalSection(
             title="Security and assurance",
@@ -788,6 +920,14 @@ def build_startup_coach(
             evidence_needed=[item.title for item in policy_checks if item.status != "SUPPORTED"],
         ),
         ProposalSection(
+            title="Risk management",
+            draft=(
+                _normalise_space(values["Risk management"])
+                or "Record delivery risks, owners, mitigations, triggers and assumptions needing clarification."
+            ),
+            evidence_needed=["Risk register", "Named risk owners", "Dependency and trigger log"],
+        ),
+        ProposalSection(
             title="Team and relevant proof",
             draft=(
                 _normalise_space(values["Team"])
@@ -795,15 +935,23 @@ def build_startup_coach(
             ),
             evidence_needed=["Role-to-work-package map", "Availability confirmation", "Comparable delivery evidence"],
         ),
-        ProposalSection(
-            title="Social value and measurement",
-            draft=(
-                _normalise_space(values["Social value"])
-                or "Only include commitments the team can measure and contractually deliver."
-            ),
-            evidence_needed=["Baseline", "Target", "Measurement owner"],
-        ),
     ]
+    if social_criterion_found:
+        sections.append(
+            ProposalSection(
+                title="Social value and measurement",
+                draft=(
+                    _normalise_space(values["Social value"])
+                    or "Only include commitments the team can measure and contractually deliver."
+                ),
+                evidence_needed=[
+                    "Published evaluation criterion",
+                    "Baseline",
+                    "Target",
+                    "Measurement owner",
+                ],
+            )
+        )
     rehearsal = [
         f"{finding.area}: {finding.next_prompt}"
         for finding in findings
@@ -820,7 +968,9 @@ def build_startup_coach(
         rehearsal_questions=rehearsal[:8],
         boundary=(
             "This is a structured first draft and critique based on user-supplied facts. "
-            "It does not invent experience, certifications or policy commitments."
+            "It does not invent experience, certifications or policy commitments. Optional "
+            "social-value coaching appears only when a matching published evaluation criterion "
+            "is detected."
         ),
     )
 
@@ -840,6 +990,13 @@ def build_next_actions(
     submission_due = next(
         (item.starts_at for item in milestones if item.label == "Tender submission"), None
     )
+    for milestone in milestones:
+        actions.append(NextAction(
+            priority=2, title=f"Confirm and track {milestone.label.lower()}",
+            reason="Verify the original date/time and assign a named owner. " + milestone.tender_source.excerpt,
+            owner_role="Finance lead" if milestone.label == "Financial instrument deadline" else "Delivery lead" if milestone.label == "Delivery milestone" else "Bid manager",
+            due_before=milestone.starts_at, source_ids=[milestone.id],
+        ))
     for finding in policy_checks:
         if finding.status == "SUPPORTED":
             continue

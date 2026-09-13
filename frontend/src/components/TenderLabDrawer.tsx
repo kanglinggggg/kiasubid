@@ -5,6 +5,7 @@ import {
   BriefcaseBusiness,
   CalendarPlus,
   Check,
+  ChevronDown,
   ChevronRight,
   Clipboard,
   Database,
@@ -35,20 +36,26 @@ import type {
   TenderLabMode,
   TenderLabRequest,
   TenderLabResponse,
+  TenderLabStartupAnswers,
 } from "../types/tenderLab";
+import { GuidedProposalBuilder } from "./GuidedProposalBuilder";
+import { buildReadinessReport, FitAndRecommendation, GuidancePanel, QualityPanel, StructuredBrief } from "./ReadinessPanels";
 
-type ResultTab = "overview" | "agents" | "checks" | "decision" | "history" | "change" | "plan";
+type ResultTab = "overview" | "proposal" | "agents" | "checks" | "decision" | "quality" | "history" | "change" | "plan";
 
 interface TenderLabDrawerProps {
   open: boolean;
   onClose: () => void;
+  initialMode?: TenderLabMode | null;
 }
 
 const resultTabs: Array<{ id: ResultTab; label: string }> = [
   { id: "overview", label: "Brief" },
+  { id: "proposal", label: "Proposal studio" },
   { id: "agents", label: "Agent room" },
   { id: "checks", label: "Checks" },
   { id: "decision", label: "Decision" },
+  { id: "quality", label: "Quality advisor" },
   { id: "history", label: "Award history" },
   { id: "change", label: "Change rehearsal" },
   { id: "plan", label: "Plan" },
@@ -114,8 +121,6 @@ function userSupplied(payload: TenderLabRequest): TenderLabRequest {
   return {
     ...payload,
     source_type: "USER_SUPPLIED",
-    source_label:
-      payload.source_type === "SYNTHETIC_SAMPLE" ? "Edited workspace input" : payload.source_label,
     company: {
       ...payload.company,
       source_type: "USER_SUPPLIED",
@@ -133,7 +138,7 @@ function userSupplied(payload: TenderLabRequest): TenderLabRequest {
   };
 }
 
-export function TenderLabDrawer({ open, onClose }: TenderLabDrawerProps) {
+export function TenderLabDrawer({ open, onClose, initialMode = null }: TenderLabDrawerProps) {
   const [payload, setPayload] = useState<TenderLabRequest | null>(null);
   const [result, setResult] = useState<TenderLabResponse | null>(null);
   const [tab, setTab] = useState<ResultTab>("overview");
@@ -155,6 +160,8 @@ export function TenderLabDrawer({ open, onClose }: TenderLabDrawerProps) {
   const [runningAgents, setRunningAgents] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [studioVersion, setStudioVersion] = useState(0);
+  const [workspaceEntered, setWorkspaceEntered] = useState(false);
   const closeRef = useRef<HTMLButtonElement>(null);
   const initialLoadRequestedRef = useRef(false);
   const changeRunIdRef = useRef(0);
@@ -169,6 +176,7 @@ export function TenderLabDrawer({ open, onClose }: TenderLabDrawerProps) {
     setResult(null);
     try {
       setPayload(await tenderLabApi.sample(mode));
+      setStudioVersion(v => v + 1);
       setAwardContext(null);
       setPartnerPackage(null);
       setCompanyProfile(null);
@@ -183,13 +191,15 @@ export function TenderLabDrawer({ open, onClose }: TenderLabDrawerProps) {
   useEffect(() => {
     if (!open) {
       initialLoadRequestedRef.current = false;
+      setWorkspaceEntered(false);
       return;
     }
-    if (!payload && !initialLoadRequestedRef.current) {
+    if (!initialLoadRequestedRef.current) {
       initialLoadRequestedRef.current = true;
-      void loadSample("SME");
+      setWorkspaceEntered(Boolean(initialMode));
+      void loadSample(initialMode ?? "SME");
     }
-  }, [open, payload]);
+  }, [open, initialMode]);
 
   useEffect(() => {
     if (!open) return;
@@ -229,7 +239,7 @@ export function TenderLabDrawer({ open, onClose }: TenderLabDrawerProps) {
   }
 
   function update(next: TenderLabRequest) {
-    setPayload(userSupplied(next));
+    setPayload(userSupplied({ ...next, source_label: next.tender_text !== payload?.tender_text ? "Edited tender text" : next.source_label }));
     setResult(null);
     setPartnerPackage(null);
     invalidateChangeSimulation();
@@ -253,6 +263,7 @@ export function TenderLabDrawer({ open, onClose }: TenderLabDrawerProps) {
         source_label: target === "tender" ? extracted.filename : payload.source_label,
       });
       setPayload(next);
+      if (target === "tender") setStudioVersion(v => v + 1);
       setResult(null);
       setPartnerPackage(null);
       const suffix = extracted.warnings.length ? ` ${extracted.warnings.join(" ")}` : "";
@@ -349,6 +360,36 @@ export function TenderLabDrawer({ open, onClose }: TenderLabDrawerProps) {
     }
   }
 
+  async function useGuidedDraft(markdown: string, answers: TenderLabStartupAnswers) {
+    if (!payload) return;
+    invalidateChangeSimulation();
+    invalidateAgentLoop();
+    const next = userSupplied({
+      ...payload,
+      proposal_text: markdown,
+      startup_answers: answers,
+    });
+    setPayload(next);
+    setPartnerPackage(null);
+    setRunning(true);
+    setError(null);
+    setNotice(null);
+    try {
+      setResult(await tenderLabApi.analyze(next));
+      setTab("agents");
+      setNotice(
+        "The grounded founder draft is now the proposal evidence. Agent Room is ready for specialist review.",
+      );
+    } catch (reason) {
+      const failure =
+        reason instanceof Error ? reason : new Error("Unable to prepare the draft for Agent Room.");
+      setError(failure.message);
+      throw failure;
+    } finally {
+      setRunning(false);
+    }
+  }
+
   async function searchAwards() {
     if (awardQuery.trim().length < 2) return;
     setLoadingAwards(true);
@@ -395,8 +436,22 @@ export function TenderLabDrawer({ open, onClose }: TenderLabDrawerProps) {
     const link = document.createElement("a");
     link.href = url;
     link.download = "tender-milestones.ics";
+    document.body.appendChild(link);
     link.click();
-    URL.revokeObjectURL(url);
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+
+  function downloadReport() {
+    if (!payload || !result) return;
+    const url = URL.createObjectURL(new Blob([buildReadinessReport(payload, result, agentLoop)], { type: "text/markdown;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "bid-readiness-review.md";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 
   async function copyClarifications() {
@@ -526,22 +581,22 @@ export function TenderLabDrawer({ open, onClose }: TenderLabDrawerProps) {
               <h2 id="tender-lab-title">Tender Lab</h2>
             </div>
           </div>
-          <div className="tender-lab-mode" aria-label="Workspace mode">
+          {workspaceEntered ? <div className="tender-lab-mode" aria-label="Workspace mode">
             <button
               aria-pressed={payload?.mode === "SME"}
               disabled={loadingSample}
-              onClick={() => void loadSample("SME")}
+              onClick={() => { setWorkspaceEntered(true); void loadSample("SME"); }}
             >
               <BriefcaseBusiness size={15} /> SME review
             </button>
             <button
               aria-pressed={payload?.mode === "STARTUP"}
               disabled={loadingSample}
-              onClick={() => void loadSample("STARTUP")}
+              onClick={() => { setWorkspaceEntered(true); void loadSample("STARTUP"); }}
             >
               <GraduationCap size={16} /> Startup guide
             </button>
-          </div>
+          </div> : <span className="tender-lab-mode-placeholder">Two focused workspaces</span>}
           <button aria-label="Close Tender Lab" className="icon-button" onClick={onClose} ref={closeRef}>
             <X size={19} />
           </button>
@@ -568,6 +623,42 @@ export function TenderLabDrawer({ open, onClose }: TenderLabDrawerProps) {
 
         {loadingSample || !payload ? (
           <div className="tender-lab-loading"><LoaderCircle className="spin" /> Loading workspace</div>
+        ) : !workspaceEntered ? (
+          <main className="tender-lab-launcher">
+            <span className="tender-lab-launcher-mark"><Sparkles size={23} /></span>
+            <span className="eyebrow">Choose your workspace</span>
+            <h3>How are you approaching this tender?</h3>
+            <p>Each path opens a focused workspace  your documents and review results stay separate</p>
+            <div className="tender-lab-mode-cards">
+              <button onClick={() => setWorkspaceEntered(true)}>
+                <span className="tender-lab-mode-card-icon sme"><BriefcaseBusiness size={22} /></span>
+                <span className="tender-lab-mode-card-copy">
+                  <small>For established teams</small>
+                  <strong>SME Bid Room</strong>
+                  <span>Check bid fit  compliance  commercials and delivery risk</span>
+                </span>
+                <ArrowRight size={18} />
+                <span className="tender-lab-hover-preview">
+                  <small>Inside this workspace</small>
+                  <strong>ACRA profile  bid readiness  five-agent review</strong>
+                </span>
+              </button>
+              <button onClick={() => { setWorkspaceEntered(true); void loadSample("STARTUP"); }}>
+                <span className="tender-lab-mode-card-icon startup"><GraduationCap size={23} /></span>
+                <span className="tender-lab-mode-card-copy">
+                  <small>For founders and student teams</small>
+                  <strong>Startup Proposal Studio</strong>
+                  <span>Understand the tender  strengthen answers and build a proposal</span>
+                </span>
+                <ArrowRight size={18} />
+                <span className="tender-lab-hover-preview">
+                  <small>Inside this workspace</small>
+                  <strong>Plain-English brief  guided builder  milestone plan</strong>
+                </span>
+              </button>
+            </div>
+            <small className="tender-lab-launcher-note">Hover to preview  click to enter</small>
+          </main>
         ) : (
           <div className="tender-lab-workspace">
             <aside className="tender-lab-inputs">
@@ -587,47 +678,64 @@ export function TenderLabDrawer({ open, onClose }: TenderLabDrawerProps) {
                 <input value={payload.agency} onChange={(event) => update({ ...payload, agency: event.target.value })} />
               </label>
 
-              <div className="tender-lab-file-row">
-                <div>
-                  <strong>Tender source</strong>
-                  <small>Selectable-text PDF  TXT or Markdown</small>
+              <details className="tender-lab-input-group">
+                <summary>
+                  <span className="tender-lab-input-group-icon"><FileText size={15} /></span>
+                  <span><strong>Documents</strong><small>Tender and proposal source</small></span>
+                  <span className="tender-lab-input-group-state">2 ready</span>
+                  <ChevronDown size={14} />
+                </summary>
+                <div className="tender-lab-input-group-body">
+                  <div className="tender-lab-file-row">
+                    <div>
+                      <strong>Tender source</strong>
+                      <small>Selectable-text PDF  DOCX  TXT or Markdown</small>
+                    </div>
+                    <label className="tender-lab-upload">
+                      {extracting === "tender" ? <LoaderCircle className="spin" size={15} /> : <Upload size={15} />}
+                      Replace
+                      <input
+                        accept=".pdf,.docx,.txt,.md,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        disabled={extracting !== null}
+                        onChange={(event) => void uploadDocument("tender", event.target.files?.[0])}
+                        type="file"
+                      />
+                    </label>
+                  </div>
+                  <label className="tender-lab-field tender-lab-textarea">
+                    <span>Tender text  page markers are retained</span>
+                    <textarea value={payload.tender_text} onChange={(event) => update({ ...payload, tender_text: event.target.value })} />
+                  </label>
+
+                  <div className="tender-lab-file-row">
+                    <div><strong>Proposal draft</strong><small>Used only for text coverage matching</small></div>
+                    <label className="tender-lab-upload">
+                      {extracting === "proposal" ? <LoaderCircle className="spin" size={15} /> : <Upload size={15} />}
+                      Replace
+                      <input
+                        accept=".pdf,.docx,.txt,.md,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        disabled={extracting !== null}
+                        onChange={(event) => void uploadDocument("proposal", event.target.files?.[0])}
+                        type="file"
+                      />
+                    </label>
+                  </div>
+                  <label className="tender-lab-field tender-lab-textarea compact">
+                    <span>Proposal text</span>
+                    <textarea value={payload.proposal_text} onChange={(event) => update({ ...payload, proposal_text: event.target.value })} />
+                  </label>
                 </div>
-                <label className="tender-lab-upload">
-                  {extracting === "tender" ? <LoaderCircle className="spin" size={15} /> : <Upload size={15} />}
-                  Replace
-                  <input
-                    accept=".pdf,.txt,.md,text/plain,application/pdf"
-                    disabled={extracting !== null}
-                    onChange={(event) => void uploadDocument("tender", event.target.files?.[0])}
-                    type="file"
-                  />
-                </label>
-              </div>
-              <label className="tender-lab-field tender-lab-textarea">
-                <span>Tender text  page markers are retained</span>
-                <textarea value={payload.tender_text} onChange={(event) => update({ ...payload, tender_text: event.target.value })} />
-              </label>
+              </details>
 
-              <div className="tender-lab-file-row">
-                <div><strong>Proposal draft</strong><small>Used only for text coverage matching</small></div>
-                <label className="tender-lab-upload">
-                  {extracting === "proposal" ? <LoaderCircle className="spin" size={15} /> : <Upload size={15} />}
-                  Replace
-                  <input
-                    accept=".pdf,.txt,.md,text/plain,application/pdf"
-                    disabled={extracting !== null}
-                    onChange={(event) => void uploadDocument("proposal", event.target.files?.[0])}
-                    type="file"
-                  />
-                </label>
-              </div>
-              <label className="tender-lab-field tender-lab-textarea compact">
-                <span>Proposal text</span>
-                <textarea value={payload.proposal_text} onChange={(event) => update({ ...payload, proposal_text: event.target.value })} />
-              </label>
-
-              <div className="tender-lab-section-label">Company facts</div>
-              <div className="tender-lab-profile-upload">
+              <details className="tender-lab-input-group">
+                <summary>
+                  <span className="tender-lab-input-group-icon"><BriefcaseBusiness size={15} /></span>
+                  <span><strong>Company profile</strong><small>ACRA and declared capability</small></span>
+                  <span className="tender-lab-input-group-state">Ready</span>
+                  <ChevronDown size={14} />
+                </summary>
+                <div className="tender-lab-input-group-body">
+                  <div className="tender-lab-profile-upload">
                 <div>
                   <strong>ACRA Business Profile</strong>
                   <small>Selectable-text PDF  parsed locally  not an ACRA verification</small>
@@ -643,8 +751,8 @@ export function TenderLabDrawer({ open, onClose }: TenderLabDrawerProps) {
                     type="file"
                   />
                 </label>
-              </div>
-              {companyProfile && (
+                  </div>
+                  {companyProfile && (
                 <div className="tender-lab-profile-result">
                   <div className="tender-lab-profile-result-head">
                     <span>NOT OFFICIALLY VERIFIED</span>
@@ -655,6 +763,8 @@ export function TenderLabDrawer({ open, onClose }: TenderLabDrawerProps) {
                     <div><small>UEN</small><strong>{companyProfile.uen.value ?? "Review required"}</strong></div>
                     <div><small>Primary SSIC</small><strong>{companyProfile.primary_ssic.value?.code ?? "Review required"}</strong></div>
                     <div><small>Paid-up capital</small><strong>{payload.company.paid_up_capital_sgd === null ? "Review required" : money(payload.company.paid_up_capital_sgd)}</strong></div>
+                    <div><small>Registered / incorporated</small><strong>{payload.company.registration_date ?? "Review required"}</strong></div>
+                    <div><small>Business activity</small><strong>{payload.company.primary_ssic_description ?? "Review required"}</strong></div>
                   </div>
                   <details>
                     <summary>Review extraction evidence and boundaries</summary>
@@ -674,12 +784,12 @@ export function TenderLabDrawer({ open, onClose }: TenderLabDrawerProps) {
                     {companyProfile.boundaries.map((boundary) => <p key={boundary}>{boundary}</p>)}
                   </details>
                 </div>
-              )}
-              <label className="tender-lab-field">
+                  )}
+                  <label className="tender-lab-field">
                 <span>Company or team</span>
                 <input value={payload.company.name} onChange={(event) => update({ ...payload, company: { ...payload.company, name: event.target.value } })} />
-              </label>
-              <div className="tender-lab-field-grid">
+                  </label>
+                  <div className="tender-lab-field-grid">
                 <label className="tender-lab-field">
                   <span>Contract value  SGD</span>
                   <input min="0" type="number" value={payload.contract_value_sgd ?? ""} onChange={(event) => update({ ...payload, contract_value_sgd: asNumber(event.target.value) })} />
@@ -688,15 +798,23 @@ export function TenderLabDrawer({ open, onClose }: TenderLabDrawerProps) {
                   <span>Declared delivery limit</span>
                   <input min="0" type="number" value={payload.company.max_delivery_value_sgd ?? ""} onChange={(event) => update({ ...payload, company: { ...payload.company, max_delivery_value_sgd: asNumber(event.target.value) } })} />
                 </label>
-              </div>
-              <label className="tender-lab-field">
+                  </div>
+                  <label className="tender-lab-field">
                 <span>Capabilities  comma separated</span>
                 <input value={payload.company.capabilities.join(", ")} onChange={(event) => update({ ...payload, company: { ...payload.company, capabilities: event.target.value.split(",").map((item) => item.trim()).filter(Boolean) } })} />
-              </label>
+                  </label>
+                </div>
+              </details>
 
               {payload.mode === "SME" && payload.pricing ? (
-                <>
-                  <div className="tender-lab-section-label">Cost resilience</div>
+                <details className="tender-lab-input-group">
+                  <summary>
+                    <span className="tender-lab-input-group-icon"><Database size={15} /></span>
+                    <span><strong>Commercial inputs</strong><small>Cost and comparable values</small></span>
+                    <span className="tender-lab-input-group-state">Ready</span>
+                    <ChevronDown size={14} />
+                  </summary>
+                  <div className="tender-lab-input-group-body">
                   <div className="tender-lab-field-grid">
                     <label className="tender-lab-field">
                       <span>Estimated cost  SGD</span>
@@ -711,15 +829,25 @@ export function TenderLabDrawer({ open, onClose }: TenderLabDrawerProps) {
                     <span>Comparable values  user supplied</span>
                     <input value={payload.pricing.comparable_awards_sgd.join(", ")} onChange={(event) => update({ ...payload, pricing: { ...payload.pricing!, comparable_awards_sgd: event.target.value.split(",").map((item) => Number(item.trim())).filter((item) => Number.isFinite(item) && item > 0), comparables_source: "USER_SUPPLIED", comparables_note: "Values edited by the user; scope comparability has not been verified." } })} />
                   </label>
-                </>
+                  </div>
+                </details>
               ) : payload.startup_answers ? (
-                <>
-                  <div className="tender-lab-section-label">Founder answers</div>
+                <details className="tender-lab-input-group">
+                  <summary>
+                    <span className="tender-lab-input-group-icon"><Sparkles size={15} /></span>
+                    <span><strong>Founder answers</strong><small>Eight guided response areas</small></span>
+                    <span className="tender-lab-input-group-state">8 fields</span>
+                    <ChevronDown size={14} />
+                  </summary>
+                  <div className="tender-lab-input-group-body">
                   {(
                     [
                       ["solution_summary", "Solution and measurable outcome"],
+                      ["technical_architecture", "Technical architecture and data flow"],
                       ["delivery_approach", "Delivery and acceptance"],
+                      ["operations_maintenance", "Operations and maintenance"],
                       ["security_approach", "Security approach"],
+                      ["risk_management", "Risk management and dependencies"],
                       ["team_strength", "Team proof"],
                       ["social_value", "Optional social value"],
                     ] as const
@@ -733,7 +861,8 @@ export function TenderLabDrawer({ open, onClose }: TenderLabDrawerProps) {
                       />
                     </label>
                   ))}
-                </>
+                  </div>
+                </details>
               ) : null}
 
               <button className="tender-lab-run" disabled={running || payload.tender_text.trim().length < 30} onClick={() => void analyze()}>
@@ -770,6 +899,10 @@ export function TenderLabDrawer({ open, onClose }: TenderLabDrawerProps) {
                       <span className="eyebrow">Analysis ready</span>
                       <h3>{result.brief.objective}</h3>
                       <p>{result.brief.plain_language_summary}</p>
+                      <div className="readiness-shortcuts">
+                        <button className="tender-lab-secondary" onClick={() => setTab("decision")}>View bid-fit and recommendation</button>
+                        <button className="tender-lab-secondary" onClick={downloadReport}>Download review report</button>
+                      </div>
                     </div>
                     <div className="tender-lab-stats">
                       <span><strong>{summary?.supported}</strong> covered</span>
@@ -780,16 +913,19 @@ export function TenderLabDrawer({ open, onClose }: TenderLabDrawerProps) {
                   </div>
 
                   <nav className="tender-lab-tabs" aria-label="Tender Lab results">
-                    {resultTabs.map((item) => (
-                      <button key={item.id} aria-selected={tab === item.id} onClick={() => setTab(item.id)}>
-                        {item.label}
-                      </button>
-                    ))}
+                    {resultTabs
+                      .filter((item) => item.id !== "proposal" || payload.mode === "STARTUP")
+                      .map((item) => (
+                        <button key={item.id} aria-selected={tab === item.id} onClick={() => setTab(item.id)}>
+                          {item.label}
+                        </button>
+                      ))}
                   </nav>
 
                   <div className="tender-lab-result-body">
                     {tab === "overview" && (
                       <div className="tender-lab-stack">
+                        {result.brief.clauses && <StructuredBrief result={result} />}
                         <section className="tender-lab-card">
                           <div className="tender-lab-card-title"><FileText size={17} /><div><span>Supplied source</span><h4>Mandatory wording detected</h4></div></div>
                           {result.brief.mandatory_signals.length ? (
@@ -823,6 +959,8 @@ export function TenderLabDrawer({ open, onClose }: TenderLabDrawerProps) {
                         </section>
                       </div>
                     )}
+
+                    {tab === "quality" && <QualityPanel result={result} />}
 
                     {tab === "agents" && (
                       <div className="tender-lab-stack">
@@ -903,25 +1041,37 @@ export function TenderLabDrawer({ open, onClose }: TenderLabDrawerProps) {
                                 <div><small>Critic rounds</small><strong>{agentLoop.loop_iterations}</strong></div>
                                 <div><small>Evidence items</small><strong>{agentLoop.evidence_register.length}</strong></div>
                               </div>
-                              <div className="tender-lab-agent-executions">
+                              <div className="tender-lab-agent-status-strip" aria-label="Agent execution status">
                                 {agentLoop.executions.map((execution) => (
-                                  <article key={execution.agent_id}>
-                                    <div>
-                                      <strong>{execution.label}</strong>
-                                      <span className={`tender-lab-execution-mode ${execution.mode.toLowerCase()}`}>
-                                        {execution.mode.replaceAll("_", " ")}
-                                      </span>
-                                    </div>
-                                    <p>{execution.detail}</p>
-                                    <small>
-                                      {execution.status.replaceAll("_", " ")}  ·  {execution.attempts} attempt{execution.attempts === 1 ? "" : "s"}
-                                      {execution.revision_count ? `  ·  ${execution.revision_count} revision` : ""}
-                                      {`  ·  ${Math.round(execution.duration_ms)} ms`}
-                                      {execution.total_tokens === null ? "" : `  ·  ${execution.total_tokens} tokens`}
-                                    </small>
-                                  </article>
+                                  <span key={execution.agent_id}>
+                                    <Check size={11} />
+                                    <strong>{execution.label.replace(" specialist", "")}</strong>
+                                    <small>{execution.mode === "DETERMINISTIC_FALLBACK" ? "Fallback" : "Live"}</small>
+                                  </span>
                                 ))}
                               </div>
+                              <details className="tender-lab-agent-disclosure">
+                                <summary>Inspect model  latency and token details <ChevronDown size={13} /></summary>
+                                <div className="tender-lab-agent-executions">
+                                  {agentLoop.executions.map((execution) => (
+                                    <article key={execution.agent_id}>
+                                      <div>
+                                        <strong>{execution.label}</strong>
+                                        <span className={`tender-lab-execution-mode ${execution.mode.toLowerCase()}`}>
+                                          {execution.mode.replaceAll("_", " ")}
+                                        </span>
+                                      </div>
+                                      <p>{execution.detail}</p>
+                                      <small>
+                                        {execution.status.replaceAll("_", " ")}  ·  {execution.attempts} attempt{execution.attempts === 1 ? "" : "s"}
+                                        {execution.revision_count ? `  ·  ${execution.revision_count} revision` : ""}
+                                        {`  ·  ${Math.round(execution.duration_ms)} ms`}
+                                        {execution.total_tokens === null ? "" : `  ·  ${execution.total_tokens} tokens`}
+                                      </small>
+                                    </article>
+                                  ))}
+                                </div>
+                              </details>
                               {agentLoop.fallback_reasons.length > 0 && (
                                 <div className="tender-lab-agent-fallback">
                                   <strong>Visible fallback reasons</strong>
@@ -930,39 +1080,43 @@ export function TenderLabDrawer({ open, onClose }: TenderLabDrawerProps) {
                               )}
                             </section>
 
-                            <section className="tender-lab-card tender-lab-agent-plan">
-                              <div className="tender-lab-card-title"><Route size={17} /><div><span>Planner output</span><h4>Specialist brief</h4></div></div>
-                              <p>{agentLoop.plan.mission}</p>
-                              <div className="tender-lab-agent-plan-grid">
-                                {agentLoop.plan.tasks.map((task) => (
-                                  <article key={task.agent}>
-                                    <span>{task.agent}</span>
-                                    <h4>{agentLabels[task.agent]}</h4>
-                                    <p>{task.objective}</p>
-                                    {task.focus.length > 0 && <small>{task.focus.join("  ·  ")}</small>}
-                                  </article>
-                                ))}
-                              </div>
-                              {agentLoop.plan.success_criteria.length > 0 && (
-                                <div className="tender-lab-agent-success">
-                                  <small>Success criteria</small>
-                                  <ul>{agentLoop.plan.success_criteria.map((criterion) => <li key={criterion}>{criterion}</li>)}</ul>
+                            <details className="tender-lab-card tender-lab-agent-plan tender-lab-card-disclosure">
+                              <summary className="tender-lab-card-title"><Route size={17} /><div><span>Planner output</span><h4>Specialist brief</h4></div><small>{agentLoop.plan.tasks.length} delegated tasks</small><ChevronDown size={15} /></summary>
+                              <div className="tender-lab-card-disclosure-body">
+                                <p>{agentLoop.plan.mission}</p>
+                                <div className="tender-lab-agent-plan-grid">
+                                  {agentLoop.plan.tasks.map((task) => (
+                                    <article key={task.agent}>
+                                      <span>{task.agent}</span>
+                                      <h4>{agentLabels[task.agent]}</h4>
+                                      <p>{task.objective}</p>
+                                      {task.focus.length > 0 && <small>{task.focus.join("  ·  ")}</small>}
+                                    </article>
+                                  ))}
                                 </div>
-                              )}
-                            </section>
+                                {agentLoop.plan.success_criteria.length > 0 && (
+                                  <div className="tender-lab-agent-success">
+                                    <small>Success criteria</small>
+                                    <ul>{agentLoop.plan.success_criteria.map((criterion) => <li key={criterion}>{criterion}</li>)}</ul>
+                                  </div>
+                                )}
+                              </div>
+                            </details>
 
                             <section className="tender-lab-card tender-lab-agent-findings">
                               <div className="tender-lab-card-title"><ShieldCheck size={17} /><div><span>Specialist outputs</span><h4>Evidence-grounded findings</h4></div></div>
                               <div className="tender-lab-agent-specialist-list">
                                 {agentLoop.specialists.map((specialist) => (
-                                  <article className="tender-lab-agent-specialist" key={specialist.agent}>
-                                    <header>
+                                  <details className="tender-lab-agent-specialist" key={specialist.agent}>
+                                    <summary>
                                       <div><span>{specialist.agent}</span><h4>{agentLabels[specialist.agent]}</h4></div>
                                       <div>
                                         {specialist.revision_count > 0 && <small>Revised once</small>}
+                                        <small>{specialist.output.findings.length} findings</small>
                                         <span className={`tender-lab-critic-verdict ${specialist.critic_verdict.toLowerCase()}`}>Critic {specialist.critic_verdict}</span>
+                                        <ChevronDown size={14} />
                                       </div>
-                                    </header>
+                                    </summary>
                                     <p className="tender-lab-agent-summary">{specialist.output.summary}</p>
                                     <div className="tender-lab-agent-finding-list">
                                       {specialist.output.findings.map((finding) => {
@@ -1017,31 +1171,34 @@ export function TenderLabDrawer({ open, onClose }: TenderLabDrawerProps) {
                                       </details>
                                     )}
                                     <footer><small>Handoff</small><span>{specialist.output.handoff}</span></footer>
-                                  </article>
+                                  </details>
                                 ))}
                               </div>
                             </section>
 
-                            <section className="tender-lab-card tender-lab-agent-critic">
-                              <div className="tender-lab-card-title">
+                            <details className="tender-lab-card tender-lab-agent-critic tender-lab-card-disclosure">
+                              <summary className="tender-lab-card-title">
                                 <ScanSearch size={17} />
                                 <div><span>Independent review</span><h4>Critic</h4></div>
                                 <span className={`tender-lab-critic-verdict ${agentLoop.critic.overall_verdict.toLowerCase()}`}>
                                   {agentLoop.critic.overall_verdict}
                                 </span>
-                              </div>
-                              <p>The critic checks whether each claim is supported by its cited evidence and whether specialists conflict</p>
-                              <div className="tender-lab-agent-critic-grid">
-                                <div>
-                                  <small>Cross-agent conflicts</small>
-                                  {agentLoop.critic.cross_agent_conflicts.length ? <ul>{agentLoop.critic.cross_agent_conflicts.map((item) => <li key={item}>{item}</li>)}</ul> : <p>No conflict reported</p>}
+                                <ChevronDown size={15} />
+                              </summary>
+                              <div className="tender-lab-card-disclosure-body">
+                                <p>The critic checks whether each claim is supported by its cited evidence and whether specialists conflict</p>
+                                <div className="tender-lab-agent-critic-grid">
+                                  <div>
+                                    <small>Cross-agent conflicts</small>
+                                    {agentLoop.critic.cross_agent_conflicts.length ? <ul>{agentLoop.critic.cross_agent_conflicts.map((item) => <li key={item}>{item}</li>)}</ul> : <p>No conflict reported</p>}
+                                  </div>
+                                  <div>
+                                    <small>Human checks</small>
+                                    {agentLoop.critic.human_checks.length ? <ul>{agentLoop.critic.human_checks.map((item) => <li key={item}>{item}</li>)}</ul> : <p>No additional check reported</p>}
+                                  </div>
                                 </div>
-                                <div>
-                                  <small>Human checks</small>
-                                  {agentLoop.critic.human_checks.length ? <ul>{agentLoop.critic.human_checks.map((item) => <li key={item}>{item}</li>)}</ul> : <p>No additional check reported</p>}
-                                </div>
                               </div>
-                            </section>
+                            </details>
 
                             <section className={`tender-lab-card tender-lab-agent-decision ${agentLoop.decision.readiness.toLowerCase()}`}>
                               <div className="tender-lab-card-title">
@@ -1074,6 +1231,7 @@ export function TenderLabDrawer({ open, onClose }: TenderLabDrawerProps) {
 
                     {tab === "checks" && (
                       <div className="tender-lab-stack">
+                        <GuidancePanel result={result} />
                         <section className="tender-lab-card">
                           <div className="tender-lab-card-title"><ShieldCheck size={17} /><div><span>Tender-triggered scan</span><h4>Proposal coverage</h4></div></div>
                           <p className="tender-lab-method">Keyword pack {result.policy_checks[0]?.pack_version}  matching text is not official compliance certification</p>
@@ -1145,6 +1303,7 @@ export function TenderLabDrawer({ open, onClose }: TenderLabDrawerProps) {
 
                     {tab === "decision" && (
                       <div className="tender-lab-stack">
+                        <FitAndRecommendation result={result} />
                         {result.pricing && (
                           <section className="tender-lab-card">
                             <div className="tender-lab-card-title"><BriefcaseBusiness size={17} /><div><span>Transparent arithmetic</span><h4>Cost resilience</h4></div></div>
@@ -1644,6 +1803,11 @@ export function TenderLabDrawer({ open, onClose }: TenderLabDrawerProps) {
                     )}
                   </div>
                 </>
+              )}
+              {payload.mode === "STARTUP" && (
+                <div hidden={!result || tab !== "proposal"} className="tender-lab-result-body">
+                  <GuidedProposalBuilder key={studioVersion} tender={payload} onUseDraft={useGuidedDraft} />
+                </div>
               )}
             </main>
           </div>

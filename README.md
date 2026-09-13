@@ -32,6 +32,29 @@ Validated clause change → Dated capability-demand delta → Cross-tender colli
 → { Deterministic counterfactual options + Capability roadmap } → Human decision
 ```
 
+The separate Startup workspace adds a preparation path without changing operational bid state:
+
+```text
+Selectable-text PDF / DOCX / TXT / Markdown
+→ plain-English tender analysis
+→ eight-question Proposal Mentor (seven required + one optional social-value question)
+→ grounded preparation draft
+→ Agent Room evidence register
+→ five logical agents: planner + compliance/commercial/timeline specialists + critic
+→ human review
+```
+
+The proposal path is deliberately bounded. It covers outcomes, architecture and scale, delivery,
+operations and maintenance, security, risk management, team evidence, and an optional social-value
+answer. It records the founder's own answers, blocks common absolute or guaranteed claims, keeps
+missing proof outside the proposal-evidence scan, and labels deterministic fallback whenever the
+configured language model is unavailable. Moving the draft into Agent Room reruns the stateless
+Tender Lab analysis; it does not approve, persist, contact, or submit anything.
+
+The socio-economic and quality advisor is deterministic, tender-specific decision support, not a
+sixth Agent Room agent. It appears only when the supplied tender's published evaluation criteria
+support the topic, and it never invents points or promises an evaluation outcome.
+
 Operational feasibility uses four explicit states: `FEASIBLE`, `RECOVERABLE`, `BLOCKED`, and `UNCERTAIN`. Submission Coverage is tracked independently and never overrides a broken mandatory gate.
 
 The exact bid-state formulas, precedence, thresholds, and API trace fields are documented in
@@ -102,6 +125,7 @@ backend/app/
   portfolio/     deterministic capability-demand simulation and demo scenario
   rules/         typed reusable procurement rules and deterministic evaluators
   services/      assessment, feasibility, coverage, and deadline rules
+  tender_lab/    stateless document intake, proposal mentor, agent room, pricing context, and rehearsal
   database.py    SQLite engine and session lifecycle
   models.py      SQLAlchemy domain entities
   main.py        FastAPI endpoints
@@ -109,7 +133,7 @@ backend/app/
 
 frontend/src/
   api/           typed API client
-  components/    metrics, requirement control, detail, activity drawer
+  components/    control room, Tender Lab, Proposal Studio, Agent Room, and activity views
   types/         shared frontend contract
   App.tsx        Bid Control Room workflow
 ```
@@ -219,6 +243,19 @@ the interpretation; otherwise it displays Demo fallback.
     partner, or submits to GeBIZ.
 13. Click the reset icon to replay the demonstration.
 
+### Startup Proposal Studio smoke flow
+
+1. Open **Tender Lab**, select **Startup guide**, and run the supplied synthetic sample.
+2. Open **Proposal studio**. Review the seven required founder answers; the eighth social-value
+   answer is optional.
+3. Show that unsupported certainty such as a guarantee or `100% compliant` is stopped for revision.
+4. Generate the grounded preparation draft. Each section identifies the recorded founder-answer
+   field it came from, while missing policy proof remains under **Open items for human review**.
+5. Click **Use draft in Agent Room**. The draft becomes proposal evidence in a fresh stateless
+   analysis and the interface moves to the five-agent planner-specialist-critic workflow.
+6. If the model token is absent, expired, or its output fails validation, point out the visible
+   `FALLBACK` state. The deterministic path remains usable and does not masquerade as a live result.
+
 ### Demo reset
 
 The header reset control returns the application to the baseline `FEASIBLE / 8 of 8 / 91% /
@@ -237,6 +274,17 @@ GET  /api/bids/BID-DEMO-001
 POST /api/tenders/interpret-requirements
 POST /api/corrigenda/interpret-change
 POST /api/portfolio/simulate
+GET  /api/tender-lab/sample/{mode}
+POST /api/tender-lab/extract
+POST /api/tender-lab/analyze
+POST /api/tender-lab/agent-loop
+POST /api/tender-lab/company-profile/extract
+POST /api/tender-lab/partner-route
+POST /api/tender-lab/simulate-change
+POST /api/tender-lab/proposal/plan
+POST /api/tender-lab/proposal/review-answer
+POST /api/tender-lab/proposal/draft
+GET  /api/public-data/gebiz/awards
 POST /api/demo/reset
 POST /api/demo/bids/BID-DEMO-001/apply-corrigendum
 POST /api/tasks/{task_id}/complete
@@ -353,14 +401,30 @@ commercial decisions, and submission remain the supplier's responsibility.
 
 ## Known limitations
 
-- The supplied documents, company, evidence, and corrigendum are synthetic demo data; there is no
-  GeBIZ connection or automatic submission path.
-- The HTTP interpretation boundary accepts extracted page/section text. PDF upload and OCR are not
-  part of this frozen MVP.
+- The supplied tender, company, evidence, and corrigendum demo fixtures are synthetic. There is no
+  direct GeBIZ tender-document retrieval or automatic submission path. Award history uses a
+  separate live data.gov.sg public-data query with a small source-preserving cached fallback.
+- Tender Lab accepts selectable-text PDF, DOCX, TXT, and Markdown uploads in memory. Its guidance
+  retrieval is tender-triggered lexical matching over a small, versioned local corpus of curated
+  official-source summaries—not a live policy lookup, verbatim legal text, or the full policy
+  manual. It does not perform OCR or preserve reliable DOCX page numbers.
+- The ACRA Business Profile importer parses explicit facts only from a user-supplied selectable-text
+  PDF or TXT file. It performs no OCR or live ACRA registry lookup, does not verify that the profile
+  is current or authentic, and does not infer EPU, SCA, or GSR grades or establish official
+  eligibility, financial capacity, credential validity, or delivery capability.
+- Tender Lab extracts candidate milestones from supplied tender text, exports them as a local `.ics`
+  file, and opens prefilled Google Calendar event pages. BidOps does not authenticate to, read,
+  synchronize with, or automatically modify a calendar; direct calendar integration remains a
+  planned extension.
+- Proposal Studio creates a human-review preparation draft from recorded answers. It is not an
+  autonomous proposal writer, official compliance check, legal opinion, buyer acceptance signal,
+  or submission path.
 - The portfolio layer operates on supplied capability counts and dated demand windows. It is not a
   named-person scheduler, and it does not infer staff assignments from calendars or HR systems.
-- Portfolio routes are deterministic counterfactuals, not recommendations. No pricing, margin,
-  award probability, market forecast, or automatic execution is implemented.
+- Portfolio routes are deterministic counterfactuals, not recommendations. Award History exposes
+  descriptive public award-price signals only; no recommended bid price, pricing or margin
+  optimisation, award probability, agency-preference model, market forecast, or automatic execution
+  is implemented.
 - Capability-roadmap items aggregate only known gaps in the supplied opportunities. They indicate
   which eligibility checks could be addressed; they do not predict wins, revenue, or startup growth.
 - Live Bedrock validation uses `amazon.nova-lite-v1:0` in `us-east-1`. The R17 demo change

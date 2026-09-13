@@ -63,10 +63,84 @@ export interface TenderLabPricingInputs {
 
 export interface TenderLabStartupAnswers {
   solution_summary: string;
+  technical_architecture: string;
   delivery_approach: string;
+  operations_maintenance: string;
   security_approach: string;
+  risk_management: string;
   team_strength: string;
   social_value: string;
+}
+
+export type ProposalAnswerKey = keyof TenderLabStartupAnswers;
+
+export interface ProposalQuestion {
+  id: string;
+  answer_key: ProposalAnswerKey;
+  section: string;
+  question: string;
+  why_it_matters: string;
+  answer_guidance: string[];
+  required: boolean;
+  context_refs: string[];
+}
+
+export interface ProposalPlanResponse {
+  questions: ProposalQuestion[];
+  mentor_intro: string;
+  boundary: string;
+}
+
+export interface ProposalCritique {
+  question_id: string;
+  verdict: "STRONG" | "NEEDS_DETAIL" | "RISKY_CLAIM";
+  mentor_feedback: string;
+  strengths: string[];
+  gaps: string[];
+  evidence_needed: string[];
+  unsupported_claims: string[];
+  formalized_answer: string;
+  answer_quotes: string[];
+  needs_follow_up: boolean;
+  follow_up_question: string | null;
+}
+
+export interface ProposalExecution {
+  mode: "BEDROCK" | "GROQ" | "DETERMINISTIC_FALLBACK";
+  model_id: string | null;
+  attempts: number;
+  duration_ms: number;
+  detail: string;
+}
+
+export interface ProposalAnswerReviewResponse {
+  provider_state: "LIVE" | "FALLBACK";
+  critique: ProposalCritique;
+  execution: ProposalExecution;
+  fallback_reason: string | null;
+  boundary: string;
+}
+
+export interface GroundedDraftSection {
+  section_key: ProposalAnswerKey;
+  heading: string;
+  text: string;
+  supporting_answer_keys: ProposalAnswerKey[];
+  context_refs: string[];
+}
+
+export interface ProposalDraftResponse {
+  provider_state: "LIVE" | "FALLBACK";
+  model_id: string | null;
+  title: string;
+  executive_summary: string;
+  sections: GroundedDraftSection[];
+  open_items: string[];
+  markdown: string;
+  review_notice: string;
+  execution: ProposalExecution;
+  fallback_reason: string | null;
+  boundary: string;
 }
 
 export interface TenderLabRequest {
@@ -190,6 +264,9 @@ export interface TenderLabResponse {
     plain_language_summary: string;
     mandatory_signals: string[];
     requested_outcomes: string[];
+    clauses?: Array<{ id: string; categories: string[]; plain_language: string; source: TenderLabSourceReference }>;
+    missing_sections?: string[];
+    method?: string;
   };
   policy_checks: TenderLabPolicyCheck[];
   clarification_questions: TenderLabClarification[];
@@ -213,6 +290,23 @@ export interface TenderLabResponse {
   }>;
   calendar_ics: string;
   boundaries: string[];
+  company_fit?: {
+    company_age_years: number | null;
+    assessed_on: string;
+    status: "POTENTIAL_FIT" | "MISMATCH" | "NEEDS_INFORMATION";
+    checks: Array<{ id: string; area: string; status: "MATCH" | "MISMATCH" | "UNKNOWN" | "CONTEXT"; company_fact: string; explanation: string; next_step: string; source: TenderLabSourceReference | null }>;
+    boundary: string;
+  } | null;
+  quality_advisor?: {
+    status: "CRITERIA_FOUND" | "NO_PUBLISHED_CRITERIA_FOUND";
+    opportunities: Array<{ id: string; topic: string; criterion: TenderLabSourceReference; suggested_commitment: string; evidence_needed: string[]; owner_role: string; cost_consideration: string }>;
+    boundary: string;
+  } | null;
+  retrieved_guidance?: Array<{ id: string; title: string; publisher: string; url: string; reviewed_on: string; passage: string; matched_terms: string[]; limitation: string; passage_type: "CURATED_SUMMARY" }>;
+  recommendation?: {
+    action: string; headline: string; reasons: string[]; evidence_ids: string[];
+    alternatives: string[]; missing_information: string[]; human_review_required: boolean;
+  } | null;
 }
 
 export interface DocumentExtractionResponse {

@@ -115,6 +115,9 @@ Invariant: **Requirement → Evidence → Assessment → Change → Impact → R
 |---|---:|---:|---:|
 | Interpret supplied tender prose into typed requirements | Primary, when live provider succeeds | Schema/provenance validation and safe fallback | Confirm source completeness and review |
 | Match a corrigendum to a stable requirement and list field changes | Primary, when live provider succeeds | Reject malformed, ambiguous, unsafe, or out-of-scope output | Resolve unclear amendments |
+| Run the five logical Agent Room roles | Planner, three specialists, and critic when the provider succeeds | Restore omitted roles, enforce evidence allow-lists, provide labelled fallback, assemble decision packet | Review every finding and decide |
+| Critique Proposal Studio answers and draft a response | Primary, when live provider succeeds | Enforce grounding, reject novel claims, exclude marked open items from evidence matching, provide safe fallback | Verify every claim and commitment |
+| Gate socio-economic and quality suggestions to detected evaluation wording | No | Yes; deterministic clause matching | Confirm applicability, cost, evidence, and approval |
 | Version requirements and supersede old assessments | No | Yes | Review history |
 | Match evidence and evaluate mandatory gates | No | Yes | Supply/verify authoritative evidence |
 | Decide `FEASIBLE`, `RECOVERABLE`, `BLOCKED`, `UNCERTAIN` | No | Yes | Challenge/approve internal conclusion |
@@ -158,14 +161,27 @@ rules, not unseen model accuracy.
 - The portfolio companion opportunity, delivery windows, capability counts, and allocation
   assumptions are synthetic. The capability layer uses aggregate counts, not named-person
   scheduling or live HR/calendar data.
-- The product accepts extracted page/section text; PDF upload, OCR, and live GeBIZ retrieval are
-  not implemented.
+- Tender Lab accepts selectable-text PDF, DOCX, TXT, and Markdown uploads in memory. OCR and direct
+  live GeBIZ tender-document retrieval are not implemented, and DOCX citations follow document
+  order rather than a reliable page number. Its policy guidance is a small, versioned local corpus
+  of curated official-source summaries, not a live policy lookup or complete legal source.
+- Award history uses a separate data.gov.sg query with a labelled cached fallback. Its awarded
+  supplier rows, amounts, ranges, and repeat-supplier patterns are descriptive research signals
+  only; they do not reveal losing bids, bidder counts, scoring weights, scope comparability,
+  willingness to partner, recommended prices, or win probabilities.
+- The ACRA importer parses explicit fields from a user-supplied selectable-text profile. It performs
+  no registry verification and does not infer GSR, EPU, or SCA grades, official eligibility,
+  financial capacity, credential validity, or delivery capability.
+- Milestones support local `.ics` export and prefilled Google Calendar event links only. There is no
+  authenticated calendar connection, synchronization, or calendar-derived staffing; direct
+  integration remains planned.
 - No model or system can guarantee extraction completeness; human review and blind evaluation are
   still required.
 - SQLite/local single-user execution is suitable for the hackathon, not production multi-user use.
-- There is no authentication, automatic proposal writing, pricing or margin optimisation, award
-  probability, competitor intelligence, staff reallocation, partner outreach, bid withdrawal, or
-  GeBIZ submission.
+- There is no authentication, autonomous proposal completion, recommended-price or margin
+  optimiser, award-probability model, staff reallocation, automatic partner contact, bid
+  withdrawal, or GeBIZ submission. Proposal Studio produces a labelled preparation draft from
+  recorded founder answers and sends it only to the internal Agent Room evidence workflow.
 - Capability-roadmap items address only known gaps in the supplied opportunity set. They do not
   predict qualification, awards, revenue, or startup growth.
 
@@ -186,11 +202,13 @@ submit. Today, mandatory clauses, staff qualifications, evidence, tasks, and cor
 separate documents and spreadsheets. A high completion percentage can hide one fatal gate.
 
 GeBIZ BidOps gives the team one working record: Requirement, Evidence, Assessment, Change, Impact,
-and Recovery Action. When configured and successful, Bedrock has one narrow job—turn tender wording
-into validated structured changes with a document, page, section, and exact snippet; the demo has a
-clearly labelled fallback for the fixed fixture. From there, ordinary code versions the requirement,
-retires stale assessments, rechecks evidence, applies the four-state feasibility policy, and
-calculates coverage, deadline risk, and dated capability demand.
+and Recovery Action. In this incident story, Bedrock has one narrow job—turn tender wording into
+validated structured changes with a document, page, section, and exact snippet; the demo has a
+clearly labelled fallback for the fixed fixture. The separate Tender Lab also uses bounded model
+calls for Proposal Studio coaching and its five-agent evidence review. From there, ordinary code
+validates model output, versions the requirement, retires stale assessments, rechecks evidence,
+applies the four-state feasibility policy, and calculates coverage, deadline risk, and dated
+capability demand.
 
 When Corrigendum #2 raises R17 from three to four CISSP engineers, BidOps retains v1, creates v2,
 finds that Engineer D's CV and availability are incomplete, and moves FEASIBLE to RECOVERABLE with
@@ -213,5 +231,5 @@ go/no-go discussion—without pretending to predict an award or automating an ir
 Do not describe BidOps as a world first, a live GeBIZ integration, a named-person scheduler, a
 pricing or win-probability engine, or an autonomous bidding agent. Do not claim that SMEs receive a
 procurement preference, that any agency follows an unsupported fixed scoring pattern, or that a
-particular policy applies to every tender. Present only the source-linked clause, supplied scenario
-facts, deterministic arithmetic, and measured test results.
+particular policy applies to every tender. Present only source-linked tender clauses, supplied
+scenario facts, provenance-labelled public context, deterministic arithmetic, and measured results.

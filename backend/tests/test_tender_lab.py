@@ -65,7 +65,7 @@ def test_sme_workflow_is_source_backed_and_bounded(client: TestClient):
     assert all(
         item["remediation"] is None
         for item in data["policy_checks"]
-        if item["proposal_evidence"] is not None
+        if item["status"] == "SUPPORTED"
     )
     assert len(data["clarification_questions"]) >= 2
     assert len(data["milestones"]) == 3
@@ -84,10 +84,15 @@ def test_startup_workflow_builds_critique_without_commercial_prediction(client: 
     assert data["mode"] == "STARTUP"
     assert data["pricing"] is None
     assert data["startup_coach"] is not None
-    assert len(data["startup_coach"]["sections"]) == 5
-    assert {item["status"] for item in data["startup_coach"]["findings"]} >= {
-        "THIN",
-        "MISSING",
+    assert len(data["startup_coach"]["sections"]) == 7
+    assert {item["area"] for item in data["startup_coach"]["findings"]} >= {
+        "Architecture and scale",
+        "Operations and maintenance",
+        "Risk management",
+    }
+    assert "THIN" in {item["status"] for item in data["startup_coach"]["findings"]}
+    assert "Social value" not in {
+        item["area"] for item in data["startup_coach"]["findings"]
     }
     assert any(item["id"] == "STARTUP_COACH" for item in data["trace"])
     assert "does not invent" in data["startup_coach"]["boundary"]

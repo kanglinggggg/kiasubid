@@ -1,17 +1,34 @@
 # Runtime AI boundary
 
-GeBIZ BidOps gives the selected language model exactly two jobs:
+GeBIZ BidOps uses the selected language model in four bounded workflow areas; Agent Room itself
+contains five logical agents:
 
 1. **Tender Requirement Interpretation** converts supplied tender page/section text into validated Pydantic `StructuredRequirement` records. It preserves document, page, section, and an exact source snippet. Ambiguous details must be returned as `UNCERTAIN` and left null.
 2. **Corrigendum Semantic Change Interpretation** compares one existing structured requirement with new corrigendum text. It returns `ADDED`, `MODIFIED`, `REMOVED`, or `UNCHANGED`, the affected stable key when identifiable, and the exact structured fields changed.
+3. **Tender Lab Agent Room** contains five logical agents: one planner, three fixed specialists
+   (compliance, commercial, and timeline), and one critic. The critic checks every returned finding
+   against allowed evidence IDs and may request at most one revision round. Ordinary code restores
+   omitted roles, rejects unknown evidence references, and creates the final human decision packet.
+4. **Startup Proposal Studio** critiques eight recorded founder answers and may turn the seven
+   required answers into a supplier-response preparation draft; the eighth, social-value answer is
+   optional, and users are told to skip it unless they have a grounded, tender-relevant commitment.
+   The model must
+   retain the recorded answer in each rewritten section, cite recorded answer fields, avoid new
+   numeric, certainty, technology, certification, or capability claims, and place missing proof in
+   a marked open-items block. That block is excluded when the generated draft is rescanned as
+   proposal evidence, preventing an unresolved item from becoming a false supported control.
+
+The separate socio-economic and quality advisor is deterministic tender-clause screening, not a
+model invocation or sixth Agent Room agent. It cannot invent evaluation points, funding
+eligibility, accreditation, or company commitments.
 
 The production path calls Amazon Bedrock Runtime's Converse API. A temporary Groq path is also
 available for authorized local validation through Groq's OpenAI-compatible Chat Completions API.
-Both use near-zero temperature, request JSON-schema output, validate again with Pydantic, check
-changed-field old/new values against the supplied structures, and make one repair retry by default.
-Source document, page, and section come from the trusted request envelope. A model response with a
-non-contiguous or fabricated source snippet fails validation and is retried; it is not silently
-accepted.
+Every model path uses near-zero temperature, requests JSON-schema output, validates again with
+Pydantic, and makes one repair retry by default. The corrigendum path additionally checks changed-
+field old/new values against supplied structures. Source document, page, and section come from the
+trusted request envelope. A requirement-interpretation response with a non-contiguous or fabricated
+source snippet fails validation and is retried; it is not silently accepted.
 
 After validation, ordinary code maps the six typed procurement-rule kinds to the supported
 requirement/gate vocabulary, projects explicitly represented rule fields into stable
@@ -25,8 +42,12 @@ that asks a model to ignore validation, reveal prompts, call tools, or choose an
 has no authority. The clients expose no tools, and adversarial development fixtures exercise this
 boundary.
 
-The model output does not write to the database and cannot set an assessment, feasibility state,
-coverage percentage, task, or deadline risk. The main corrigendum flow proceeds only when the
+Proposal Studio and Agent Room are stateless and cannot browse, change files, contact suppliers,
+approve a response, or submit it. Their visible deterministic fallbacks keep the demo usable when a
+provider is unavailable without claiming a live model result.
+
+The model output does not directly write to the database and cannot set an assessment, feasibility
+state, coverage percentage, task, or deadline risk. The main corrigendum flow proceeds only when the
 validated interpretation is confident, is `MODIFIED`, identifies `R17`, and contains the expected
 isolated count change. Otherwise it stops before superseding an assessment.
 

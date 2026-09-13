@@ -11,6 +11,9 @@ import type {
   BusinessProfileIngestionResult,
   DocumentExtractionResponse,
   PartnerRoutePackage,
+  ProposalAnswerReviewResponse,
+  ProposalDraftResponse,
+  ProposalPlanResponse,
   TenderLabMode,
   TenderLabRequest,
   TenderLabResponse,
@@ -95,6 +98,21 @@ export const tenderLabApi = {
     request<AgentLoopResponse>("/api/tender-lab/agent-loop", {
       method: "POST",
       body: JSON.stringify({ tender, max_revision_rounds: maxRevisionRounds }),
+    }),
+  proposalPlan: (tender: TenderLabRequest) =>
+    request<ProposalPlanResponse>("/api/tender-lab/proposal/plan", {
+      method: "POST",
+      body: JSON.stringify({ tender }),
+    }),
+  reviewProposalAnswer: (tender: TenderLabRequest, questionId: string, answer: string) =>
+    request<ProposalAnswerReviewResponse>("/api/tender-lab/proposal/review-answer", {
+      method: "POST",
+      body: JSON.stringify({ tender, question_id: questionId, answer }),
+    }),
+  generateProposalDraft: (tender: TenderLabRequest) =>
+    request<ProposalDraftResponse>("/api/tender-lab/proposal/draft", {
+      method: "POST",
+      body: JSON.stringify({ tender }),
     }),
 };
 

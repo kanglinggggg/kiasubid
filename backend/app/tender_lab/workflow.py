@@ -13,6 +13,8 @@ from app.tender_lab.engine import (
     extract_milestones,
     scan_policy_checks,
 )
+from app.tender_lab.guidance import retrieve_guidance
+from app.tender_lab.readiness import advise_quality, assess_company, recommend
 from app.tender_lab.schemas import (
     ClarificationQuestion,
     Milestone,
@@ -222,7 +224,7 @@ TENDER_LAB_GRAPH = _build_graph()
 def run_tender_lab(payload: TenderLabRequest) -> TenderLabResponse:
     """Run a deterministic, stateless decision-support workflow."""
     state = TENDER_LAB_GRAPH.invoke({"payload": payload, "trace": []})
-    return TenderLabResponse(
+    result = TenderLabResponse(
         mode=payload.mode,
         source_type=payload.source_type,
         brief=state["brief"],
@@ -237,9 +239,16 @@ def run_tender_lab(payload: TenderLabRequest) -> TenderLabResponse:
         calendar_ics=state["calendar_ics"],
         boundaries=[
             "This workspace is stateless: the analysis does not update the operational bid record.",
-            "Inputs are user-supplied or synthetic; no live GeBIZ, ACRA, MOM or GovTech lookup is performed.",
+            "Inputs are user-supplied or synthetic. Relevant versioned public-guidance summaries are retrieved locally; no live policy or ACRA registry lookup occurs during analysis. Award history uses a separate public-data connector.",
             "A supported control means matching proposal text was found, not that official compliance is certified.",
             "Pricing is transparent sensitivity arithmetic, not a win probability or recommended bid price.",
             "Participation routes are simulations only; a human decides whether and how to proceed.",
         ],
     )
+    result.company_fit = assess_company(payload)
+    result.retrieved_guidance = retrieve_guidance(payload.tender_text)
+    result.quality_advisor = advise_quality(result)
+    result.recommendation = recommend(payload, result)
+    result.trace.append(TraceStep(id="READINESS", label="Consolidate company fit, quality criteria and guidance",
+                                 status="COMPLETED", detail=f"Retrieved {len(result.retrieved_guidance)} versioned guidance summary passage(s); screened company facts and generated a human-review recommendation."))
+    return result

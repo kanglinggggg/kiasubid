@@ -13,6 +13,7 @@ import type {
   TenderLabResponse,
 } from "../types/tenderLab";
 import { TenderLabDrawer } from "./TenderLabDrawer";
+import { buildReadinessReport } from "./ReadinessPanels";
 
 function sample(mode: TenderLabMode): TenderLabRequest {
   return {
@@ -57,8 +58,11 @@ function sample(mode: TenderLabMode): TenderLabRequest {
       mode === "STARTUP"
         ? {
             solution_summary: "A useful solution",
+            technical_architecture: "A web dashboard with a bounded alert-ingestion API.",
             delivery_approach: "",
+            operations_maintenance: "",
             security_approach: "",
+            risk_management: "",
             team_strength: "",
             social_value: "",
           }
@@ -196,6 +200,55 @@ function result(mode: TenderLabMode): TenderLabResponse {
     ],
   };
 }
+
+it("exports a consolidated review without overstating unrun agents or commercial certainty", () => {
+  const payload = sample("SME");
+  const markdown = buildReadinessReport(payload, result("SME"), null);
+
+  expect(markdown).toContain("# Bid readiness review — Managed security service");
+  expect(markdown).toContain("## Company bid fit");
+  expect(markdown).toContain("## Clarifications");
+  expect(markdown).toContain("## Commercial context");
+  expect(markdown).toContain("Not a win-probability model or recommendation.");
+  expect(markdown).toContain("Not run for this input. The screening recommendation is not a five-agent approval.");
+  expect(markdown).toContain("Human review required before submission.");
+});
+
+it("retains the founder interview answer and critique when switching result tabs", async () => {
+  vi.spyOn(tenderLabApi, "sample").mockImplementation(async mode => sample(mode));
+  vi.spyOn(tenderLabApi, "analyze").mockResolvedValue(result("STARTUP"));
+  vi.spyOn(tenderLabApi, "proposalPlan").mockResolvedValue({
+    mentor_intro: "Founder interview", boundary: "Draft only",
+    questions: [{ id: "Q-SOLUTION", answer_key: "solution_summary", section: "Solution",
+      question: "What are you building?", why_it_matters: "Connect the product to the tender",
+      answer_guidance: ["Give one concrete outcome"], required: true, context_refs: [] }],
+  });
+  vi.spyOn(tenderLabApi, "reviewProposalAnswer").mockResolvedValue({
+    provider_state: "FALLBACK", fallback_reason: "Offline", boundary: "Draft only",
+    execution: { mode: "DETERMINISTIC_FALLBACK", model_id: null, attempts: 0, duration_ms: 0, detail: "Local critique" },
+    critique: { question_id: "Q-SOLUTION", verdict: "NEEDS_DETAIL", mentor_feedback: "Add acceptance evidence",
+      strengths: [], gaps: [], evidence_needed: ["Acceptance test"], unsupported_claims: [],
+      formalized_answer: "Our portal provides a clear project dashboard.", answer_quotes: ["Our portal"],
+      needs_follow_up: true, follow_up_question: "How will the buyer test it?" },
+  });
+  render(<TenderLabDrawer open onClose={vi.fn()} />);
+  await enterStartupWorkspace();
+  fireEvent.click(await screen.findByRole("button", { name: "Run startup guide" }));
+  await screen.findByText("Analysis ready");
+  fireEvent.click(screen.getByRole("button", { name: "Proposal studio" }));
+  const answer = await screen.findByLabelText("Solution answer");
+  fireEvent.change(answer, { target: { value: "Our portal provides a clear project dashboard." } });
+  fireEvent.click(screen.getByRole("button", { name: "Review answer" }));
+  await screen.findByText("Add acceptance evidence");
+  fireEvent.click(screen.getByRole("button", { name: "Brief" }));
+  fireEvent.click(screen.getByRole("button", { name: "Quality advisor" }));
+  fireEvent.click(screen.getByRole("button", { name: "Proposal studio" }));
+  expect(screen.getByLabelText("Solution answer")).toHaveValue("Our portal provides a clear project dashboard.");
+  expect(screen.getByText("Add acceptance evidence")).toBeVisible();
+  expect(screen.getByText("How will the buyer test it?")).toBeVisible();
+  expect(screen.getByText("Structured response wording")).toBeVisible();
+  expect(tenderLabApi.proposalPlan).toHaveBeenCalledTimes(1);
+});
 
 const awardContext: AwardContextResponse = {
   query: "cybersecurity",
@@ -574,7 +627,41 @@ const agentLoopResult: AgentLoopResponse = {
   ],
 };
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
+
+async function enterSmeWorkspace() {
+  fireEvent.click(await screen.findByRole("button", { name: /SME Bid Room/i }));
+  await screen.findByDisplayValue("Managed security service");
+}
+
+async function enterStartupWorkspace() {
+  fireEvent.click(await screen.findByRole("button", { name: /Startup Proposal Studio/i }));
+  await screen.findByRole("button", { name: "Run startup guide" });
+}
+
+it("downloads the consolidated report through a named browser file", async () => {
+  const createObjectURL = vi.fn((_blob: Blob) => "blob:bid-readiness-review");
+  const revokeObjectURL = vi.fn();
+  vi.stubGlobal("URL", { createObjectURL, revokeObjectURL });
+  const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+  vi.spyOn(tenderLabApi, "sample").mockImplementation(async mode => sample(mode));
+  vi.spyOn(tenderLabApi, "analyze").mockResolvedValue(result("SME"));
+
+  render(<TenderLabDrawer open onClose={vi.fn()} />);
+  await enterSmeWorkspace();
+  fireEvent.click(screen.getByRole("button", { name: "Run SME review" }));
+  await screen.findByText("Analysis ready");
+  fireEvent.click(screen.getByRole("button", { name: "Download review report" }));
+
+  expect(createObjectURL).toHaveBeenCalledOnce();
+  expect(createObjectURL.mock.calls[0][0]).toBeInstanceOf(Blob);
+  expect(anchorClick).toHaveBeenCalledOnce();
+  expect((anchorClick.mock.instances[0] as HTMLAnchorElement).download).toBe("bid-readiness-review.md");
+  await waitFor(() => expect(revokeObjectURL).toHaveBeenCalledWith("blob:bid-readiness-review"));
+});
 
 it("runs a bounded SME review and exposes its truth boundary", async () => {
   vi.spyOn(tenderLabApi, "sample").mockImplementation(async (mode) => sample(mode));
@@ -586,7 +673,8 @@ it("runs a bounded SME review and exposes its truth boundary", async () => {
 
   render(<TenderLabDrawer onClose={vi.fn()} open />);
 
-  expect(await screen.findByDisplayValue("Managed security service")).toBeInTheDocument();
+  await enterSmeWorkspace();
+  expect(screen.getByDisplayValue("Managed security service")).toBeInTheDocument();
   expect(screen.getByText("Synthetic sample")).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText("Import ACRA Business Profile"), {
     target: { files: [new File(["profile"], "acra-profile.pdf", { type: "application/pdf" })] },
@@ -651,7 +739,7 @@ it("locks amendment inputs while a change rehearsal is in flight", async () => {
 
   render(<TenderLabDrawer onClose={vi.fn()} open />);
 
-  await screen.findByDisplayValue("Managed security service");
+  await enterSmeWorkspace();
   fireEvent.click(screen.getByRole("button", { name: "Run SME review" }));
   await screen.findByText("Analysis ready");
   fireEvent.click(screen.getByRole("button", { name: "Change rehearsal" }));
@@ -677,8 +765,7 @@ it("switches to the startup branch and closes with Escape", async () => {
   vi.spyOn(tenderLabApi, "sample").mockImplementation(async (mode) => sample(mode));
   render(<TenderLabDrawer onClose={onClose} open />);
 
-  await screen.findByDisplayValue("Managed security service");
-  fireEvent.click(screen.getByRole("button", { name: "Startup guide" }));
+  await enterStartupWorkspace();
 
   await waitFor(() => expect(tenderLabApi.sample).toHaveBeenLastCalledWith("STARTUP"));
   expect(await screen.findByRole("button", { name: "Run startup guide" })).toBeInTheDocument();
@@ -694,7 +781,7 @@ it("runs the Agent Room and keeps findings traceable through critic to human dec
 
   render(<TenderLabDrawer onClose={vi.fn()} open />);
 
-  await screen.findByDisplayValue("Managed security service");
+  await enterSmeWorkspace();
   fireEvent.click(screen.getByRole("button", { name: "Run SME review" }));
   await screen.findByText("Analysis ready");
   fireEvent.click(screen.getByRole("button", { name: "Agent room" }));

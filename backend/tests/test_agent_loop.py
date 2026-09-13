@@ -193,6 +193,39 @@ def test_live_agent_loop_runs_planner_specialists_critic_and_human_gate():
     assert len(client.prompts) == 5
 
 
+def test_missing_specialist_display_title_is_derived_without_changing_the_finding():
+    compliance = _compliance()
+    original_claim = compliance["findings"][0]["claim"]
+    compliance["findings"][0].pop("title")
+    compliance["handoff"] = ""
+    client = SequenceClient([_plan(), compliance, _commercial(), _timeline(), _critic()])
+
+    result = run_agent_loop(_request(), client=client, app_settings=_settings())
+
+    finding = result.specialists[0].output.findings[0]
+    assert result.provider_state == "LIVE"
+    assert finding.title == original_claim
+    assert finding.status == "SUPPORTED"
+    assert finding.evidence_ids == ["TENDER-001", "PROPOSAL-001"]
+    assert result.specialists[0].output.handoff.startswith("Send the evidence-linked")
+    assert len(client.prompts) == 5
+
+
+def test_recoverable_specialist_alias_remains_a_gap():
+    commercial = _commercial()
+    commercial["findings"][0]["status"] = "RECOVERABLE"
+    commercial["findings"][0]["evidence_gap"] = "The commercial assumption needs human review."
+    client = SequenceClient([_plan(), _compliance(), commercial, _timeline(), _critic()])
+
+    result = run_agent_loop(_request(), client=client, app_settings=_settings())
+
+    finding = result.specialists[1].output.findings[0]
+    assert result.provider_state == "LIVE"
+    assert finding.status == "GAP"
+    assert finding.evidence_ids == ["FACT-PRICING-INPUTS"]
+    assert len(client.prompts) == 5
+
+
 def test_critic_can_trigger_one_bounded_revision_with_stable_finding_ids():
     revised_compliance = _compliance(
         claim="The tender states an MFA obligation and the proposal states MFA support."
@@ -223,6 +256,8 @@ def test_critic_can_trigger_one_bounded_revision_with_stable_finding_ids():
     assert compliance_execution.revision_count == 1
     assert compliance_execution.attempts == 2
     assert "Limit the claim" in client.prompts[5]
+    assert "Preserve exactly these finding IDs" in client.prompts[5]
+    assert "CMP-001" in client.prompts[5]
     assert result.critic.overall_verdict == "PASS"
 
 
@@ -235,9 +270,25 @@ def test_model_unavailability_fails_closed_to_visible_deterministic_fallback():
     assert all(item.mode == "DETERMINISTIC_FALLBACK" for item in result.executions)
     assert all(item.status == "FALLBACK" for item in result.executions)
     assert result.fallback_reasons == ["Planner: provider offline"]
-    assert result.decision.readiness == "READY_FOR_HUMAN_REVIEW"
+    # A proposed service is a future commitment, not established implementation evidence.
+    assert result.decision.readiness == "NEEDS_EVIDENCE"
     assert "Agent consensus is not bid approval" in result.decision.boundary
     assert len(client.prompts) == 1
+
+
+def test_provider_credentials_are_not_exposed_in_fallback_reason():
+    client = SequenceClient([
+        ModelUnavailable(
+            "Bedrock Converse failed: ExpiredTokenException: security token SECRET-VALUE"
+        )
+    ])
+
+    result = run_agent_loop(_request(), client=client, app_settings=_settings())
+
+    assert result.fallback_reasons == [
+        "Planner: The configured language-model provider is unavailable."
+    ]
+    assert "SECRET-VALUE" not in str(result.model_dump())
 
 
 def test_deterministic_guard_overrides_a_critic_that_passes_a_prohibited_claim():

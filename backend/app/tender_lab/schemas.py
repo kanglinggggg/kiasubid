@@ -51,8 +51,11 @@ class PricingInputs(StrictModel):
 
 class StartupAnswers(StrictModel):
     solution_summary: str = Field(default="", max_length=3000)
+    technical_architecture: str = Field(default="", max_length=3000)
     delivery_approach: str = Field(default="", max_length=3000)
+    operations_maintenance: str = Field(default="", max_length=3000)
     security_approach: str = Field(default="", max_length=3000)
+    risk_management: str = Field(default="", max_length=3000)
     team_strength: str = Field(default="", max_length=3000)
     social_value: str = Field(default="", max_length=3000)
 
@@ -94,11 +97,77 @@ class RemediationDraft(StrictModel):
     boundary: str
 
 
+class BriefClause(StrictModel):
+    id: str
+    categories: list[str]
+    plain_language: str
+    source: SourceReference
+
+
 class TenderBrief(StrictModel):
     objective: str
     plain_language_summary: str
     mandatory_signals: list[str]
     requested_outcomes: list[str]
+    clauses: list[BriefClause] = Field(default_factory=list)
+    missing_sections: list[str] = Field(default_factory=list)
+    method: str = "Source-linked extractive brief; not an exhaustive legal review."
+
+
+class FitCheck(StrictModel):
+    id: str
+    area: str
+    status: Literal["MATCH", "MISMATCH", "UNKNOWN", "CONTEXT"]
+    company_fact: str
+    explanation: str
+    next_step: str
+    source: SourceReference | None = None
+
+
+class CompanyFit(StrictModel):
+    company_age_years: int | None = None
+    assessed_on: str
+    status: Literal["POTENTIAL_FIT", "MISMATCH", "NEEDS_INFORMATION"]
+    checks: list[FitCheck]
+    boundary: str
+
+
+class RetrievedGuidance(StrictModel):
+    id: str
+    title: str
+    publisher: str
+    url: str
+    reviewed_on: str
+    passage: str
+    matched_terms: list[str]
+    limitation: str
+    passage_type: Literal["CURATED_SUMMARY"] = "CURATED_SUMMARY"
+
+
+class QualityOpportunity(StrictModel):
+    id: str
+    topic: str
+    criterion: SourceReference
+    suggested_commitment: str
+    evidence_needed: list[str]
+    owner_role: str
+    cost_consideration: str
+
+
+class QualityAdvisor(StrictModel):
+    status: Literal["CRITERIA_FOUND", "NO_PUBLISHED_CRITERIA_FOUND"]
+    opportunities: list[QualityOpportunity]
+    boundary: str
+
+
+class ReadinessRecommendation(StrictModel):
+    action: Literal["PROCEED_TO_HUMAN_REVIEW", "PROCEED_WITH_CAUTION", "IMPROVE_FIRST", "REQUEST_CLARIFICATION", "DO_NOT_BID_YET"]
+    headline: str
+    reasons: list[str]
+    evidence_ids: list[str]
+    alternatives: list[str]
+    missing_information: list[str]
+    human_review_required: bool = True
 
 
 class PolicyCheck(StrictModel):
@@ -223,6 +292,10 @@ class TenderLabResponse(StrictModel):
     trace: list[TraceStep]
     calendar_ics: str
     boundaries: list[str]
+    company_fit: CompanyFit | None = None
+    quality_advisor: QualityAdvisor | None = None
+    retrieved_guidance: list[RetrievedGuidance] = Field(default_factory=list)
+    recommendation: ReadinessRecommendation | None = None
 
 
 class DocumentPage(StrictModel):

@@ -67,6 +67,17 @@ from app.tender_lab.partner_router import (
     PartnerRouteRequest,
     build_partner_route_package,
 )
+from app.tender_lab.proposal_builder import (
+    ProposalAnswerReviewRequest,
+    ProposalAnswerReviewResponse,
+    ProposalDraftRequest,
+    ProposalDraftResponse,
+    ProposalPlanRequest,
+    ProposalPlanResponse,
+    build_proposal_plan,
+    generate_proposal_draft,
+    review_proposal_answer,
+)
 from app.tender_lab.sample import sample_request
 from app.tender_lab.schemas import (
     DocumentExtractionResponse,
@@ -175,6 +186,35 @@ def analyze_tender_lab(payload: TenderLabRequest) -> TenderLabResponse:
 def run_tender_lab_agent_loop(payload: AgentLoopRequest) -> AgentLoopResponse:
     """Run a bounded planner-specialist-critic loop without changing bid state."""
     return run_agent_loop(payload)
+
+
+@app.post("/api/tender-lab/proposal/plan", response_model=ProposalPlanResponse)
+def plan_tender_lab_proposal(payload: ProposalPlanRequest) -> ProposalPlanResponse:
+    """Plan a bounded, source-aware founder interview without persisting supplier material."""
+    return build_proposal_plan(payload)
+
+
+@app.post(
+    "/api/tender-lab/proposal/review-answer",
+    response_model=ProposalAnswerReviewResponse,
+)
+def review_tender_lab_proposal_answer(
+    payload: ProposalAnswerReviewRequest,
+) -> ProposalAnswerReviewResponse:
+    """Critique one recorded founder answer with a visible deterministic fallback."""
+    try:
+        return review_proposal_answer(payload)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.post("/api/tender-lab/proposal/draft", response_model=ProposalDraftResponse)
+def draft_tender_lab_proposal(payload: ProposalDraftRequest) -> ProposalDraftResponse:
+    """Generate a grounded preparation draft from the completed founder interview."""
+    try:
+        return generate_proposal_draft(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @app.post("/api/tender-lab/partner-route", response_model=PartnerRoutePackage)

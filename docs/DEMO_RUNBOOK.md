@@ -20,7 +20,7 @@ fallback** unless a real Bedrock interpretation has already been persisted. Keep
 
 | Time | Click / action | Expected state | Speaking point |
 |---|---|---|---|
-| 0:00–0:25 | No click. Point to the title, countdown, and four metric cards. | `FEASIBLE`; Critical Gates `8 / 8`; Submission Coverage `91%`; Deadline Risk `LOW`. No portfolio claim is shown yet. | “BidOps gives the supplier one operational truth: can we still submit safely, what proves it, and what must happen next?” |
+| 0:00–0:25 | No click. Point to the title, fixed scenario clock, countdown, and four metric cards. | `FEASIBLE`; Critical Gates `8 / 8`; Submission Coverage `91%`; Deadline Risk `LOW`. The clock makes clear that this is a deterministic replay, not today's live deadline. No portfolio claim is shown yet. | “BidOps gives the supplier one operational truth: can we still submit safely, what proves it, and what must happen next?” |
 | 0:25–0:55 | Click requirement **R17** if it is not already selected. Expand its source/provenance area if collapsed. | “Minimum 3 CISSP-certified engineers”; three complete A/B/C evidence sets; source document, page 17, section 4.3, exact snippet. | “R17 is a typed, source-linked gate. The model interprets the clause; it does not decide whether the bid passes.” |
 | 0:55–1:10 | Briefly point to the Submission Coverage breakdown. | Visible 50% Requirements + 30% Evidence + 20% Tasks arithmetic. | “Coverage measures preparation completeness; it never overrides a mandatory gate.” |
 | 1:10–1:20 | Click **Apply Corrigendum #2** once. | The workflow moves through interpretation, versioning, evidence checks, and recovery planning. | “A natural-language amendment raises the minimum from three to four.” |

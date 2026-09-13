@@ -107,10 +107,22 @@ def sample_request(mode: TenderLabMode) -> TenderLabRequest:
                 "We give centre operators one shared view of security alerts and a clear way "
                 "to escalate incidents, reducing the time spent checking separate tools."
             ),
+            technical_architecture=(
+                "A web dashboard receives normalised alerts through bounded connectors, keeps "
+                "production data in the Singapore cloud region and separates operator access by role."
+            ),
             delivery_approach=(
                 "We will start with discovery, onboard a pilot group and expand after acceptance."
             ),
+            operations_maintenance=(
+                "The service lead will review monitoring alerts, coordinate support escalation and "
+                "provide a monthly service report after go-live."
+            ),
             security_approach="Data stays in Singapore and the team follows an incident process.",
+            risk_management=(
+                "The delivery lead will track integration-volume uncertainty and trigger a scope "
+                "review if confirmed volumes exceed the stated assumption."
+            ),
             team_strength="Two engineers have built monitoring integrations for a student pilot.",
             social_value="",
         ),
