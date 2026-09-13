@@ -26,7 +26,7 @@ let staticBidState: BidState | null = null;
 
 async function staticJson<T>(name: string): Promise<T> {
   const response = await fetch(`${import.meta.env.BASE_URL}static-demo/${name}`);
-  if (!response.ok) throw new Error("The shared visual preview could not load its demo data.");
+  if (!response.ok) throw new Error("The shared workspace could not load its prepared data.");
   return response.json() as Promise<T>;
 }
 
@@ -84,7 +84,7 @@ export const tenderLabApi = {
         }),
   extract: (file: File) => {
     if (STATIC_PREVIEW) {
-      return Promise.reject(new Error("Document upload is available in the local full-stack demo."));
+      return Promise.reject(new Error("Document upload is available in the secure full workspace."));
     }
     const form = new FormData();
     form.append("file", file);
@@ -95,7 +95,7 @@ export const tenderLabApi = {
   },
   companyProfile: (file: File) => {
     if (STATIC_PREVIEW) {
-      return Promise.reject(new Error("ACRA upload is available in the local full-stack demo."));
+      return Promise.reject(new Error("ACRA upload is available in the secure full workspace."));
     }
     const form = new FormData();
     form.append("file", file);

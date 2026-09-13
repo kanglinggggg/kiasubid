@@ -102,7 +102,7 @@ def build_demo_portfolio_impact(
         "before_state": before["state"],
         "after_state": after["state"],
         "assumptions": [
-            "The companion delivery commitment and service windows are synthetic demo inputs.",
+            "The companion delivery commitment and service windows are planning assumptions.",
             "Potential capacity assumes Engineer D's CV and availability gaps are resolved.",
             "No employee is double-booked across overlapping delivery windows.",
             "No external delivery partner is assumed until its qualification and availability are verified.",

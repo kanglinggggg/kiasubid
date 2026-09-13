@@ -179,6 +179,9 @@ it("previews the ripple effect and requires a checked human gate before apply", 
     />,
   );
 
+  fireEvent.change(screen.getByLabelText("Exact amendment wording"), {
+    target: { value: clearPreview.source.exact_excerpt },
+  });
   fireEvent.click(screen.getByRole("button", { name: "Analyse amendment" }));
 
   expect(await screen.findByText("Preview ready")).toBeInTheDocument();
@@ -233,7 +236,9 @@ it("fails closed on ambiguous wording and exposes a clarification draft", async 
     />,
   );
 
-  fireEvent.click(screen.getByRole("button", { name: "Ambiguous change" }));
+  fireEvent.change(screen.getByLabelText("Exact amendment wording"), {
+    target: { value: ambiguousPreview.source.exact_excerpt },
+  });
   fireEvent.click(screen.getByRole("button", { name: "Analyse amendment" }));
 
   expect(await screen.findByText("Review required")).toBeInTheDocument();
@@ -293,7 +298,9 @@ it("clears a stale preview when the workspace returns to an earlier requirement 
       open
     />,
   );
-  fireEvent.click(screen.getByRole("button", { name: "Ambiguous change" }));
+  fireEvent.change(screen.getByLabelText("Exact amendment wording"), {
+    target: { value: ambiguousPreview.source.exact_excerpt },
+  });
   fireEvent.click(screen.getByRole("button", { name: "Analyse amendment" }));
   expect(await screen.findByText("Review required")).toBeInTheDocument();
 
@@ -311,7 +318,7 @@ it("clears a stale preview when the workspace returns to an earlier requirement 
     (screen.getByRole("textbox", {
       name: "Exact amendment wording",
     }) as HTMLTextAreaElement).value,
-  ).toContain("not fewer than four personnel");
+  ).toBe("");
   expect(screen.getByRole("combobox", { name: "Tracked requirement" })).toHaveValue(
     "REQ-R17-V1",
   );

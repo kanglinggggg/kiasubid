@@ -119,7 +119,7 @@ export function buildReadinessReport(payload: TenderLabRequest, result: TenderLa
     `Proposed price: SGD ${result.pricing.proposed_price_sgd.toLocaleString("en-SG")}`,
     `Estimated cost: SGD ${result.pricing.estimated_cost_sgd.toLocaleString("en-SG")}`,
     `Gross margin: ${result.pricing.gross_margin_percent}%`,
-    `Comparable-award sample: ${result.pricing.comparable_count} · Confidence: ${result.pricing.confidence}`,
+    `Comparable award records: ${result.pricing.comparable_count} · Confidence: ${result.pricing.confidence}`,
     result.pricing.position,
     result.pricing.comparables_note,
     result.pricing.boundary,

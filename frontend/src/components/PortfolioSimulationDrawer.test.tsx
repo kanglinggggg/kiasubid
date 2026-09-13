@@ -15,7 +15,7 @@ it("compares deterministic routes without presenting them as recommendations", (
   );
 
   expect(screen.getByText("Simulation only")).toBeInTheDocument();
-  expect(screen.getByText("Synthetic demo")).toBeInTheDocument();
+  expect(screen.getByText("Planning assumptions")).toBeInTheDocument();
   expect(screen.getByText(/not recommendations/i)).toBeInTheDocument();
   expect(screen.getByText("Human decision required")).toBeInTheDocument();
 

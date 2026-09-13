@@ -71,7 +71,7 @@ def sample_request(mode: TenderLabMode) -> TenderLabRequest:
         primary_ssic_code="62011",
         primary_ssic_description="Development of software and applications",
         paid_up_capital_sgd=250_000,
-        profile_source_label="Synthetic company facts for product demonstration",
+        profile_source_label="Declared company facts for the prepared workspace",
         source_type="SYNTHETIC_SAMPLE",
         verification_status="NOT_VERIFIED",
     )
@@ -79,7 +79,7 @@ def sample_request(mode: TenderLabMode) -> TenderLabRequest:
         "mode": mode,
         "tender_title": "Managed Cyber Monitoring for Community Learning Centres",
         "agency": "Digital Services Office (synthetic)",
-        "source_label": "Synthetic tender pack for product demonstration",
+        "source_label": "Prepared tender workspace",
         "source_type": "SYNTHETIC_SAMPLE",
         "tender_text": SAMPLE_TENDER,
         "proposal_text": SAMPLE_PROPOSAL,

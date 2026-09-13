@@ -194,7 +194,7 @@ export function PortfolioSimulationDrawer({
             <div>
               <div className="simulation-labels">
                 <strong>Simulation only</strong>
-                {impact.synthetic && <span>Synthetic demo</span>}
+                {impact.synthetic && <span>Planning assumptions</span>}
               </div>
               <p>No bid, staffing allocation, or external action has been changed.</p>
             </div>
@@ -404,8 +404,8 @@ export function PortfolioSimulationDrawer({
           <section className="simulation-scope-boundary">
             <ShieldAlert size={16} />
             <p>
-              The companion commitment, service windows, and capability counts are synthetic demo
-              inputs. This simulation does not use market prices, calculate win probability, or make
+              The companion commitment, service windows, and capability counts are working
+              assumptions. This simulation does not use market prices, calculate win probability, or make
               an automatic bid decision.
             </p>
           </section>

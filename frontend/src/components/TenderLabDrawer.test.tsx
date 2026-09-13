@@ -675,7 +675,7 @@ it("runs a bounded SME review and exposes its truth boundary", async () => {
 
   await enterSmeWorkspace();
   expect(screen.getByDisplayValue("Managed security service")).toBeInTheDocument();
-  expect(screen.getByText("Synthetic sample")).toBeInTheDocument();
+  expect(screen.getByText("Prepared workspace")).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText("Import ACRA Business Profile"), {
     target: { files: [new File(["profile"], "acra-profile.pdf", { type: "application/pdf" })] },
   });
@@ -704,8 +704,14 @@ it("runs a bounded SME review and exposes its truth boundary", async () => {
     expect.stringContaining("calendar.google.com/calendar/render"),
   );
 
-  fireEvent.click(screen.getByRole("button", { name: "Change rehearsal" }));
-  fireEvent.click(screen.getByRole("button", { name: "Run change rehearsal" }));
+  fireEvent.click(screen.getByRole("button", { name: "Change impact" }));
+  fireEvent.change(screen.getByLabelText("Amendment source"), {
+    target: { value: "Corrigendum 3.pdf" },
+  });
+  fireEvent.change(screen.getByLabelText("Exact amendment wording"), {
+    target: { value: "The supplier must maintain disaster recovery with a four-hour recovery time objective." },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Analyse change impact" }));
   expect(await screen.findByRole("heading", { name: "Decision state movement" })).toBeInTheDocument();
   expect(screen.getByText("NOT IN BASELINE")).toBeInTheDocument();
   expect(screen.getByText("MANDATORY")).toBeInTheDocument();
@@ -728,7 +734,7 @@ it("runs a bounded SME review and exposes its truth boundary", async () => {
   expect(screen.getByText(/2 public award value/i)).toBeInTheDocument();
 }, 10_000);
 
-it("locks amendment inputs while a change rehearsal is in flight", async () => {
+it("locks amendment inputs while a change impact analysis is in flight", async () => {
   let resolveSimulation!: (value: TenderChangeSimulation) => void;
   const pendingSimulation = new Promise<TenderChangeSimulation>((resolve) => {
     resolveSimulation = resolve;
@@ -742,17 +748,19 @@ it("locks amendment inputs while a change rehearsal is in flight", async () => {
   await enterSmeWorkspace();
   fireEvent.click(screen.getByRole("button", { name: "Run SME review" }));
   await screen.findByText("Analysis ready");
-  fireEvent.click(screen.getByRole("button", { name: "Change rehearsal" }));
+  fireEvent.click(screen.getByRole("button", { name: "Change impact" }));
 
   const source = screen.getByLabelText("Amendment source");
   const wording = screen.getByLabelText("Exact amendment wording");
-  const loadSample = screen.getByRole("button", { name: "Load sample change" });
-  fireEvent.click(screen.getByRole("button", { name: "Run change rehearsal" }));
+  fireEvent.change(source, { target: { value: "Corrigendum 3.pdf" } });
+  fireEvent.change(wording, {
+    target: { value: "The supplier must maintain disaster recovery with a four-hour recovery time objective." },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Analyse change impact" }));
 
   await waitFor(() => {
     expect(source).toBeDisabled();
     expect(wording).toBeDisabled();
-    expect(loadSample).toBeDisabled();
   });
 
   resolveSimulation(changeSimulation);

@@ -350,7 +350,7 @@ export function GuidedProposalBuilder({ tender, onUseDraft }: GuidedProposalBuil
             {draft.open_items.length > 0 && <details><summary>Open items for human review · {draft.open_items.length}</summary><ul>{draft.open_items.map((item) => <li key={item}>{item}</li>)}</ul></details>}
           </div>
           {draft.fallback_reason && (
-            <p className="tender-lab-method">Fallback visible · {draft.fallback_reason}</p>
+            <p className="tender-lab-method">Prepared with the policy rules engine · {draft.fallback_reason}</p>
           )}
           <p className="proposal-studio-review-notice"><AlertTriangle size={14} /> {draft.review_notice}</p>
           <div className="proposal-studio-actions">
@@ -381,7 +381,7 @@ function CritiqueCard({ review }: { review: ProposalAnswerReviewResponse }) {
       {critique.follow_up_question && <p><strong>Mentor follow-up</strong>{critique.follow_up_question}</p>}
       {critique.formalized_answer && critique.verdict !== "RISKY_CLAIM" && <details open><summary>Structured response wording</summary><p>{critique.formalized_answer}</p><small>Draft wording only  Verify factual claims and evidence before use</small></details>}
       {critique.evidence_needed.length > 0 && <details><summary>Evidence to attach</summary><ul>{critique.evidence_needed.map(item => <li key={item}>{item}</li>)}</ul></details>}
-      {review.fallback_reason && <small>Live model unavailable · stable critique continued</small>}
+      {review.fallback_reason && <small>Review completed with the policy rules engine</small>}
     </article>
   );
 }

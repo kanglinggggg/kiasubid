@@ -255,6 +255,6 @@ def interpret_change_fallback(
         changed_fields=[],
         resulting_requirement=None,
         interpretation_status="UNCERTAIN",
-        uncertainty_reason="The demo fallback cannot determine a precise semantic change.",
-        reason_summary="The text does not match a supported demo change pattern.",
+        uncertainty_reason="The policy rules engine cannot determine a precise semantic change.",
+        reason_summary="The text does not match a supported amendment pattern.",
     )

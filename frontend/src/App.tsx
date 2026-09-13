@@ -23,7 +23,6 @@ import {
   LockKeyhole,
   Network,
   RefreshCcw,
-  RotateCcw,
   ScanSearch,
   Shield,
   ShieldAlert,
@@ -41,7 +40,7 @@ import { RequirementDetail } from "./components/RequirementDetail";
 import { RequirementTable } from "./components/RequirementTable";
 import { StatusPill } from "./components/StatusPill";
 import { TenderLabDrawer } from "./components/TenderLabDrawer";
-import type { BidState, BidTask, DemoFixture, Requirement } from "./types/bid";
+import type { BidState, BidTask, Requirement } from "./types/bid";
 
 function parseUtc(value: string) {
   return new Date(value.endsWith("Z") ? value : `${value}Z`);
@@ -87,7 +86,6 @@ function preferredRequirement(result: BidState) {
 
 function App() {
   const [data, setData] = useState<BidState | null>(null);
-  const [fixtures, setFixtures] = useState<DemoFixture[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [mutating, setMutating] = useState(false);
@@ -97,15 +95,13 @@ function App() {
   const [tenderLabMode, setTenderLabMode] = useState<"SME" | "STARTUP" | null>(null);
   const [tenderLabMenuOpen, setTenderLabMenuOpen] = useState(false);
   const [amendmentOpen, setAmendmentOpen] = useState(false);
-  const [scenarioOpen, setScenarioOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [changed, setChanged] = useState(false);
 
   useEffect(() => {
-    Promise.all([bidApi.get(), bidApi.listFixtures()])
-      .then(([result, availableFixtures]) => {
+    bidApi.get()
+      .then((result) => {
         setData(result);
-        setFixtures(availableFixtures);
         setSelectedId(preferredRequirement(result) ?? result.requirements[0]?.id ?? null);
       })
       .catch((reason: unknown) =>
@@ -119,7 +115,7 @@ function App() {
     [data, selectedId],
   );
 
-  async function resetDemo() {
+  async function restorePreviousVersion() {
     setMutating(true);
     setError(null);
     setPortfolioOpen(false);
@@ -129,25 +125,7 @@ function App() {
       setData(result);
       setSelectedId(preferredRequirement(result));
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Unable to reset the demo.");
-    } finally {
-      setMutating(false);
-    }
-  }
-
-  async function loadFixture(fixtureId: string) {
-    setMutating(true);
-    setError(null);
-    setPortfolioOpen(false);
-    setAmendmentOpen(false);
-    try {
-      const result = await bidApi.loadFixture(fixtureId);
-      setData(result);
-      setSelectedId(preferredRequirement(result));
-      setChanged(true);
-      window.setTimeout(() => setChanged(false), 1400);
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Unable to load the demo fixture.");
+      setError(reason instanceof Error ? reason.message : "Unable to restore the previous version.");
     } finally {
       setMutating(false);
     }
@@ -182,7 +160,6 @@ function App() {
   const { metrics } = data;
   const coverage = data.calculations.submission_coverage;
   const deadline = data.calculations.deadline_risk;
-  const activeFixture = fixtures.find((fixture) => fixture.id === data.bid.fixture_id);
   const hasChange = Boolean(data.latest_change);
   const recoveryTasks = data.tasks.filter((task) => task.recovery_path);
   const statusTone =
@@ -204,59 +181,6 @@ function App() {
         </div>
         <div className="topbar-context">
           <span className="company-context">{data.company.name}</span>
-          <div
-            className={`scenario-switcher ${scenarioOpen ? "is-open" : ""}`}
-            title={activeFixture?.description}
-            onMouseLeave={() => setScenarioOpen(false)}
-            onBlur={(event) => {
-              if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-                setScenarioOpen(false);
-              }
-            }}
-          >
-            <button
-              className="scenario-trigger"
-              type="button"
-              aria-label="Select demo scenario"
-              aria-haspopup="menu"
-              aria-expanded={scenarioOpen}
-              disabled={mutating}
-              onClick={() => setScenarioOpen((current) => !current)}
-            >
-              <span>
-                <small>Scenario</small>
-                <strong>{activeFixture?.label ?? "Choose scenario"}</strong>
-              </span>
-              <ChevronDown size={14} />
-            </button>
-            <div className="scenario-menu" role="menu" aria-label="Demo scenarios">
-              <small>Switch demo state</small>
-              {fixtures.map((fixture) => {
-                const active = fixture.id === data.bid.fixture_id;
-                return (
-                  <button
-                    key={fixture.id}
-                    type="button"
-                    role="menuitemradio"
-                    aria-checked={active}
-                    className={active ? "active" : ""}
-                    disabled={mutating}
-                    onClick={() => {
-                      setScenarioOpen(false);
-                      if (!active) void loadFixture(fixture.id);
-                    }}
-                  >
-                    <span>
-                      <strong>{fixture.label}</strong>
-                      <small>{fixture.description}</small>
-                    </span>
-                    <em>{fixture.expected_status}</em>
-                    {active && <Check size={13} />}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
           <div
             className={`tender-lab-switcher ${tenderLabMenuOpen ? "is-open" : ""}`}
             onMouseLeave={() => setTenderLabMenuOpen(false)}
@@ -309,14 +233,6 @@ function App() {
             <Activity size={16} /> Activity
             <span>{data.activity_events.length}</span>
           </button>
-          <button
-            className="icon-button dark"
-            onClick={resetDemo}
-            disabled={mutating}
-            title="Reset demo"
-          >
-            <RotateCcw size={17} />
-          </button>
         </div>
       </nav>
 
@@ -325,7 +241,7 @@ function App() {
         <div className="hero-content page-width">
           <div className="hero-main">
             <div className="hero-kicker">
-              <span>{data.bid.agency}</span>
+              <span>{data.bid.agency === "Demo Government Agency" ? "Digital Government Agency" : data.bid.agency}</span>
               <CircleDot size={10} />
               <span>{data.bid.reference_number}</span>
             </div>
@@ -343,20 +259,20 @@ function App() {
               <CalendarClock size={13} /> {formatDate(data.bid.closing_at)}
             </small>
             <small>
-              <Clock3 size={13} /> Scenario clock {formatDate(data.calculations.deadline_risk.calculated_at)}
+              <Clock3 size={13} /> Assessed {formatDate(data.calculations.deadline_risk.calculated_at)}
             </small>
           </div>
           <div className="hero-action">
             {hasChange ? (
-              <button className="corrigendum-button applied" onClick={resetDemo} disabled={mutating}>
+              <button className="corrigendum-button applied" onClick={restorePreviousVersion} disabled={mutating}>
                 <CheckCircle2 size={18} />
                 <span>
                   Corrigendum #2 applied
-                  <small>Reset to replay the state change</small>
+                  <small>Restore the previous workspace version</small>
                 </span>
                 <RefreshCcw size={15} />
               </button>
-            ) : data.bid.fixture_id === "main-corrigendum" ? (
+            ) : (
               <button
                 className="corrigendum-button"
                 onClick={() => setAmendmentOpen(true)}
@@ -368,19 +284,6 @@ function App() {
                   <small>Preview impact before update</small>
                 </span>
                 <ArrowRight size={17} />
-              </button>
-            ) : (
-              <button
-                className="corrigendum-button fixture-active"
-                onClick={() => void loadFixture("main-corrigendum")}
-                disabled={mutating}
-              >
-                <ShieldAlert size={18} />
-                <span>
-                  {metrics.operational_status} fixture active
-                  <small>Return to the main scenario</small>
-                </span>
-                <RefreshCcw size={15} />
               </button>
             )}
           </div>
@@ -613,7 +516,7 @@ function App() {
                     <div>
                       <span className="portfolio-trigger-kicker">
                         Cross-bid impact
-                        {data.portfolio_impact.synthetic && <em>Synthetic demo</em>}
+                        {data.portfolio_impact.synthetic && <em>Planning assumptions</em>}
                       </span>
                       <strong>{data.portfolio_impact.summary}</strong>
                       <small>

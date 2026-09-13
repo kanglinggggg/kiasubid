@@ -52,7 +52,7 @@ def test_change_simulation_propagates_new_gap_deadline_and_commercial_recheck():
     assert any("Pricing scenarios" in item for item in result.invalidated_outputs)
     assert any("award values" in item for item in result.invalidated_outputs)
     assert result.trace[-1].id == "CHANGE-REPLAN"
-    assert "stateless rehearsal" in result.boundaries[0]
+    assert "stateless impact analysis" in result.boundaries[0]
 
 
 def test_change_without_configured_signals_stays_reviewable_without_inventing_delta():

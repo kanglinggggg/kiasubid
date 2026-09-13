@@ -136,7 +136,7 @@ it("reviews a founder answer, generates a draft and hands it to Agent Room", asy
   fireEvent.click(screen.getByRole("button", { name: "Review answer" }));
   expect(await screen.findByText("Good first-pass answer.")).toBeInTheDocument();
   expect(screen.getByText("1/1")).toBeInTheDocument();
-  expect(screen.getByText(/stable critique continued/i)).toBeInTheDocument();
+  expect(screen.getByText(/policy rules engine/i)).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole("button", { name: /Finish interview/i }));
   fireEvent.click(screen.getByRole("button", { name: "Generate grounded draft" }));

@@ -402,7 +402,7 @@ def _commercial_recheck(request: ChangeSimulationRequest) -> CommercialRecheck:
             if request.tender.pricing.comparable_awards_sgd:
                 impact_parts.append("Reconfirm that the attached award values remain scope-comparable.")
         else:
-            impact_parts.append("No baseline pricing output was supplied, so this rehearsal does not claim that one was invalidated.")
+            impact_parts.append("No baseline pricing output was supplied, so this analysis does not claim that one was invalidated.")
         if "partner route" in triggers:
             impact_parts.append(
                 "Rerun the Tender Lab participation-route simulation; no partner availability or partner package was assessed."
@@ -526,7 +526,7 @@ def simulate_tender_change(request: ChangeSimulationRequest) -> ChangeSimulation
             )
         if "partner route" in commercial.triggers:
             recovery_actions.append(
-                "Rerun the participation-route simulation; partner availability and outreach remain outside this rehearsal."
+                "Rerun the participation-route simulation; partner availability and outreach remain outside this analysis."
             )
     recovery_actions.append("A bid owner reviews the source, deltas and evidence before accepting any revised decision state.")
 
@@ -551,7 +551,7 @@ def simulate_tender_change(request: ChangeSimulationRequest) -> ChangeSimulation
         recovery_actions=recovery_actions,
         trace=_trace(controls, milestone_changes, clarifications, commercial),
         boundaries=[
-            "This is a stateless rehearsal. The baseline tender, proposal and operational bid record are unchanged.",
+            "This is a stateless impact analysis. The baseline tender, proposal and operational bid record are unchanged.",
             "The amendment is treated as new or restated wording; deletions and legal supersession require a human comparison with the signed documents.",
             "Keyword coverage and generated scaffolds are review aids, not compliance certification.",
             "Pricing inputs are never changed automatically and no bid, partner or submission decision is made.",

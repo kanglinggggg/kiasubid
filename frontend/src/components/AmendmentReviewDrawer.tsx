@@ -22,12 +22,6 @@ import { amendmentApi } from "../api/client";
 import type { AmendmentPreviewResponse } from "../types/amendment";
 import type { BidState } from "../types/bid";
 
-const CLEAR_SAMPLE =
-  "R17 / Clause 4.3 is amended. Replace ‘not fewer than three personnel holding valid CISSP certification’ with ‘not fewer than four personnel holding valid CISSP certification’. All other clauses remain unchanged.";
-
-const AMBIGUOUS_SAMPLE =
-  "R17 now requires adequate suitably qualified standby resources as needed. Further details will be advised separately.";
-
 function labelField(value: string) {
   return value
     .split("_")
@@ -70,11 +64,11 @@ export function AmendmentReviewDrawer({
     [bid.requirements],
   );
   const [requirementId, setRequirementId] = useState(defaultRequirement?.id ?? "");
-  const [documentName, setDocumentName] = useState("DGA_ICT_2026_017_Corrigendum_2.pdf");
-  const [documentVersion, setDocumentVersion] = useState(2);
-  const [page, setPage] = useState(2);
-  const [section, setSection] = useState("1. Amendment to Clause 4.3");
-  const [text, setText] = useState(CLEAR_SAMPLE);
+  const [documentName, setDocumentName] = useState("");
+  const [documentVersion, setDocumentVersion] = useState(1);
+  const [page, setPage] = useState(1);
+  const [section, setSection] = useState("");
+  const [text, setText] = useState("");
   const [preview, setPreview] = useState<AmendmentPreviewResponse | null>(null);
   const [analysing, setAnalysing] = useState(false);
   const [applying, setApplying] = useState(false);
@@ -90,7 +84,7 @@ export function AmendmentReviewDrawer({
     if (!currentIds.has(requirementId)) {
       setRequirementId(defaultRequirement?.id ?? "");
       if (!workspaceUpdated) {
-        setText(CLEAR_SAMPLE);
+        setText("");
         setPreview(null);
         setReviewed(false);
         setCopied(false);
@@ -119,16 +113,6 @@ export function AmendmentReviewDrawer({
     setWorkspaceUpdated(false);
     setCopied(false);
     setError(null);
-  }
-
-  function loadSample(kind: "clear" | "ambiguous") {
-    setRequirementId(defaultRequirement?.id ?? "");
-    setDocumentName("DGA_ICT_2026_017_Corrigendum_2.pdf");
-    setDocumentVersion(2);
-    setPage(2);
-    setSection("1. Amendment to Clause 4.3");
-    setText(kind === "clear" ? CLEAR_SAMPLE : AMBIGUOUS_SAMPLE);
-    invalidatePreview();
   }
 
   async function analyse() {
@@ -226,15 +210,6 @@ export function AmendmentReviewDrawer({
               <span>Source and target</span>
               <h3>What changed</h3>
               <p>Select the tracked obligation and paste the exact amendment wording.</p>
-            </div>
-
-            <div className="amendment-samples" aria-label="Amendment examples">
-              <button onClick={() => loadSample("clear")} type="button">
-                <CheckCircle2 size={13} /> Clear change
-              </button>
-              <button onClick={() => loadSample("ambiguous")} type="button">
-                <AlertTriangle size={13} /> Ambiguous change
-              </button>
             </div>
 
             <label className="amendment-field">
@@ -348,7 +323,7 @@ export function AmendmentReviewDrawer({
                 <div className="amendment-empty-mark">
                   <GitCompareArrows size={28} />
                 </div>
-                <span>Dry-run workspace</span>
+                <span>Preview workspace</span>
                 <h3>See the ripple effect before changing the bid</h3>
                 <p>
                   The workflow matches the selected obligation  validates an exact source  rechecks evidence  predicts internal metrics  and plans recovery tasks
@@ -383,8 +358,8 @@ export function AmendmentReviewDrawer({
                     <h3>{preview.reason_summary}</h3>
                     <p>
                       {preview.interpretation_mode === "DEMO_FALLBACK"
-                        ? "Tested deterministic parser"
-                        : `${preview.interpretation_mode} · ${preview.model_id ?? "configured model"}`}
+                        ? "Rules-based interpretation"
+                        : `AI-assisted interpretation · ${preview.model_id ?? "configured model"}`}
                       {"  "}Preview {preview.preview_id.slice(0, 8)}
                     </p>
                   </div>
@@ -449,7 +424,7 @@ export function AmendmentReviewDrawer({
                       <div className="amendment-card-heading">
                         <span className="amendment-card-icon"><ListTree size={16} /></span>
                         <div>
-                          <span>Dry-run consequences</span>
+                          <span>Projected consequences</span>
                           <h4>Current workspace → projected workspace</h4>
                         </div>
                         <strong className="amendment-simulation-badge">No write</strong>

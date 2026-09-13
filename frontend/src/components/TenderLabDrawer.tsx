@@ -57,7 +57,7 @@ const resultTabs: Array<{ id: ResultTab; label: string }> = [
   { id: "decision", label: "Decision" },
   { id: "quality", label: "Quality advisor" },
   { id: "history", label: "Award history" },
-  { id: "change", label: "Change rehearsal" },
+  { id: "change", label: "Change impact" },
   { id: "plan", label: "Plan" },
 ];
 
@@ -66,11 +66,6 @@ const agentLabels: Record<AgentTask, string> = {
   COMMERCIAL: "Commercial specialist",
   TIMELINE: "Timeline specialist",
 };
-
-const CHANGE_SAMPLE = `[Page 2]
-The supplier must maintain disaster recovery with a four-hour recovery time objective.
-The service adds three locations, but expected event volume remains TBC.
-Tender submission closes on 20 September 2026 at 12:00 SGT.`;
 
 function money(value: number | null) {
   if (value === null) return "—";
@@ -152,8 +147,8 @@ export function TenderLabDrawer({ open, onClose, initialMode = null }: TenderLab
   const [loadingAwards, setLoadingAwards] = useState(false);
   const [partnerPackage, setPartnerPackage] = useState<PartnerRoutePackage | null>(null);
   const [buildingPartnerPackage, setBuildingPartnerPackage] = useState(false);
-  const [changeSourceLabel, setChangeSourceLabel] = useState("Corrigendum 3.pdf");
-  const [amendmentText, setAmendmentText] = useState(CHANGE_SAMPLE);
+  const [changeSourceLabel, setChangeSourceLabel] = useState("");
+  const [amendmentText, setAmendmentText] = useState("");
   const [changeSimulation, setChangeSimulation] = useState<TenderChangeSimulation | null>(null);
   const [simulatingChange, setSimulatingChange] = useState(false);
   const [agentLoop, setAgentLoop] = useState<AgentLoopResponse | null>(null);
@@ -182,7 +177,7 @@ export function TenderLabDrawer({ open, onClose, initialMode = null }: TenderLab
       setCompanyProfile(null);
       setTab("overview");
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Unable to load the sample.");
+      setError(reason instanceof Error ? reason.message : "Unable to prepare the workspace.");
     } finally {
       setLoadingSample(false);
     }
@@ -335,7 +330,7 @@ export function TenderLabDrawer({ open, onClose, initialMode = null }: TenderLab
       setAmendmentText(extracted.text);
       const suffix = extracted.warnings.length ? ` ${extracted.warnings.join(" ")}` : "";
       setNotice(
-        `${extracted.filename}: ${extracted.page_count} amendment page(s) extracted for rehearsal.${suffix}`,
+        `${extracted.filename}: ${extracted.page_count} amendment page(s) extracted for impact analysis.${suffix}`,
       );
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Unable to extract the amendment.");
@@ -524,10 +519,10 @@ export function TenderLabDrawer({ open, onClose, initialMode = null }: TenderLab
       const simulation = await tenderLabApi.simulateChange(baseline, sourceLabel, wording);
       if (changeRunIdRef.current !== requestId) return;
       setChangeSimulation(simulation);
-      setNotice("Change rehearsal complete. The baseline workspace was not changed.");
+      setNotice("Change impact analysis complete. The baseline workspace was not changed.");
     } catch (reason) {
       if (changeRunIdRef.current !== requestId) return;
-      setError(reason instanceof Error ? reason.message : "Unable to rehearse this amendment.");
+      setError(reason instanceof Error ? reason.message : "Unable to analyse this amendment.");
     } finally {
       if (changeRunIdRef.current === requestId) setSimulatingChange(false);
     }
@@ -605,7 +600,7 @@ export function TenderLabDrawer({ open, onClose, initialMode = null }: TenderLab
         <div className="tender-lab-boundary">
           <FlaskConical size={15} />
           <span>
-            <strong>{payload?.source_type === "USER_SUPPLIED" ? "User-supplied workspace" : "Synthetic sample"}</strong>
+            <strong>{payload?.source_type === "USER_SUPPLIED" ? "User-supplied workspace" : "Prepared workspace"}</strong>
             Stateless analysis  no operational bid data is changed
           </span>
         </div>
@@ -665,7 +660,7 @@ export function TenderLabDrawer({ open, onClose, initialMode = null }: TenderLab
               <div className="tender-lab-input-heading">
                 <div><span className="eyebrow">Inputs</span><h3>What we know</h3></div>
                 <span className={`tender-lab-source ${payload.source_type.toLowerCase()}`}>
-                  {payload.source_type === "SYNTHETIC_SAMPLE" ? "Sample" : "Supplied"}
+                  {payload.source_type === "SYNTHETIC_SAMPLE" ? "Ready" : "Supplied"}
                 </span>
               </div>
 
@@ -1037,7 +1032,7 @@ export function TenderLabDrawer({ open, onClose, initialMode = null }: TenderLab
                               </div>
                               <div className="tender-lab-agent-meta">
                                 <div><small>Provider state</small><strong>{agentLoop.provider_state}</strong></div>
-                                <div><small>Model</small><strong>{agentLoop.model_id ?? "Deterministic fallback"}</strong></div>
+                                <div><small>Analysis engine</small><strong>{agentLoop.model_id ?? "Policy rules engine"}</strong></div>
                                 <div><small>Critic rounds</small><strong>{agentLoop.loop_iterations}</strong></div>
                                 <div><small>Evidence items</small><strong>{agentLoop.evidence_register.length}</strong></div>
                               </div>
@@ -1046,7 +1041,7 @@ export function TenderLabDrawer({ open, onClose, initialMode = null }: TenderLab
                                   <span key={execution.agent_id}>
                                     <Check size={11} />
                                     <strong>{execution.label.replace(" specialist", "")}</strong>
-                                    <small>{execution.mode === "DETERMINISTIC_FALLBACK" ? "Fallback" : "Live"}</small>
+                                    <small>{execution.mode === "DETERMINISTIC_FALLBACK" ? "Rules" : "AI"}</small>
                                   </span>
                                 ))}
                               </div>
@@ -1058,7 +1053,7 @@ export function TenderLabDrawer({ open, onClose, initialMode = null }: TenderLab
                                       <div>
                                         <strong>{execution.label}</strong>
                                         <span className={`tender-lab-execution-mode ${execution.mode.toLowerCase()}`}>
-                                          {execution.mode.replaceAll("_", " ")}
+                                          {execution.mode === "DETERMINISTIC_FALLBACK" ? "RULES ENGINE" : execution.mode.replaceAll("_", " ")}
                                         </span>
                                       </div>
                                       <p>{execution.detail}</p>
@@ -1074,7 +1069,7 @@ export function TenderLabDrawer({ open, onClose, initialMode = null }: TenderLab
                               </details>
                               {agentLoop.fallback_reasons.length > 0 && (
                                 <div className="tender-lab-agent-fallback">
-                                  <strong>Visible fallback reasons</strong>
+                                  <strong>Processing notes</strong>
                                   <ul>{agentLoop.fallback_reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>
                                 </div>
                               )}
@@ -1376,7 +1371,7 @@ export function TenderLabDrawer({ open, onClose, initialMode = null }: TenderLab
 
                             <div className="tender-lab-partner-leads">
                               <div className="tender-lab-subheading">
-                                <span>Public award sample</span>
+                                <span>Public award records</span>
                                 <h4>Supplier research leads</h4>
                               </div>
                               {partnerPackage.research_leads.length ? (
@@ -1392,7 +1387,7 @@ export function TenderLabDrawer({ open, onClose, initialMode = null }: TenderLab
                                   </article>
                                 ))
                               ) : (
-                                <p>No supplier research lead was retained from this sample</p>
+                                <p>No supplier research lead was retained from these records</p>
                               )}
                             </div>
 
@@ -1442,7 +1437,7 @@ export function TenderLabDrawer({ open, onClose, initialMode = null }: TenderLab
                           </div>
                           <p>
                             Search historical awarded supplier records by description  then inspect the
-                            actual sample before using its range as context
+                            actual records before using the range as context
                           </p>
                           <div className="tender-lab-award-search">
                             <label>
@@ -1532,7 +1527,7 @@ export function TenderLabDrawer({ open, onClose, initialMode = null }: TenderLab
                               <div className="tender-lab-card-title">
                                 <FlaskConical size={17} />
                                 <div>
-                                  <span>{awardContext.intelligence.sample_strength} SAMPLE</span>
+                                  <span>{awardContext.intelligence.sample_strength} EVIDENCE</span>
                                   <h4>Agency pattern  descriptive only</h4>
                                 </div>
                               </div>
@@ -1551,7 +1546,7 @@ export function TenderLabDrawer({ open, onClose, initialMode = null }: TenderLab
                                     <div key={supplier.supplier_name}>
                                       <span>{supplier.supplier_name}</span>
                                       <strong>{supplier.award_rows} award row{supplier.award_rows === 1 ? "" : "s"}</strong>
-                                      <small>{supplier.row_share_percent}% of sample</small>
+                                      <small>{supplier.row_share_percent}% of matched records</small>
                                     </div>
                                   ))}
                                 </div>
@@ -1562,7 +1557,7 @@ export function TenderLabDrawer({ open, onClose, initialMode = null }: TenderLab
                             <section className="tender-lab-card tender-lab-award-records">
                               <div className="tender-lab-card-title">
                                 <FileText size={17} />
-                                <div><span>Underlying sample</span><h4>Records used in the figures</h4></div>
+                                <div><span>Underlying records</span><h4>Records used in the figures</h4></div>
                               </div>
                               {awardContext.records.length ? (
                                 <div className="tender-lab-award-table-wrap">
@@ -1594,18 +1589,7 @@ export function TenderLabDrawer({ open, onClose, initialMode = null }: TenderLab
                         <section className="tender-lab-card tender-lab-change-input">
                           <div className="tender-lab-card-title">
                             <GitCompareArrows size={17} />
-                            <div><span>Stateless what-if</span><h4>Rehearse a tender amendment</h4></div>
-                            <button
-                              className="tender-lab-secondary"
-                              disabled={simulatingChange}
-                              onClick={() => {
-                                setChangeSourceLabel("Corrigendum 3.pdf");
-                                setAmendmentText(CHANGE_SAMPLE);
-                                invalidateChangeSimulation();
-                              }}
-                            >
-                              Load sample change
-                            </button>
+                            <div><span>Amendment impact</span><h4>Analyse a tender amendment</h4></div>
                           </div>
                           <p>
                             Paste the exact amendment wording  the system will compare controls deadlines
@@ -1654,7 +1638,7 @@ export function TenderLabDrawer({ open, onClose, initialMode = null }: TenderLab
                             onClick={() => void simulateChange()}
                           >
                             {simulatingChange ? <LoaderCircle className="spin" size={15} /> : <GitCompareArrows size={15} />}
-                            {simulatingChange ? "Rehearsing change" : "Run change rehearsal"}
+                            {simulatingChange ? "Analysing impact" : "Analyse change impact"}
                           </button>
                         </section>
 
