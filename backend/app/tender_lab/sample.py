@@ -33,9 +33,9 @@ baseline and environmental sustainability target for the managed service.
 Tenderers may subcontract bounded work packages only with the agency's prior written approval.
 
 [Page 11]
-The tender briefing will be held on 10 September 2026 at 10:00 SGT. Clarification questions
-must be submitted by 12 September 2026 at 17:00 SGT. Tender submission closes on
-18 September 2026 at 12:00 SGT.
+The tender briefing will be held on 17 September 2026 at 10:00 SGT. Clarification questions
+must be submitted by 19 September 2026 at 17:00 SGT. Tender submission closes on
+25 September 2026 at 12:00 SGT.
 """
 
 

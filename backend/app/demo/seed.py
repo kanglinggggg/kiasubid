@@ -28,8 +28,8 @@ from app.models import (
 
 DEMO_BID_ID = "BID-DEMO-001"
 DEMO_COMPANY_ID = "COMPANY-NEXUS"
-DEMO_CLOSING = datetime(2026, 8, 28, 9, 0)  # 17:00 Singapore time
-DEMO_NOW = datetime(2026, 8, 21, 5, 0)  # 13:00 Singapore time
+DEMO_CLOSING = datetime(2026, 9, 21, 9, 0)  # 17:00 Singapore time
+DEMO_NOW = datetime(2026, 9, 14, 5, 0)  # 13:00 Singapore time
 
 
 def _document(
@@ -143,7 +143,7 @@ def _task(
         latest_safe_at=due_at,
         estimated_duration_hours=1.0,
         recovery_path=False,
-        created_at=datetime(2026, 8, 19, 2, 0),
+        created_at=datetime(2026, 9, 12, 2, 0),
         updated_at=DEMO_NOW,
         completed_at=completed_at,
     )
@@ -174,7 +174,7 @@ def seed_demo(session: Session) -> Tender:
         submission_coverage=91,
         deadline_risk="LOW",
         human_action_required=True,
-        created_at=datetime(2026, 8, 18, 1, 0),
+        created_at=datetime(2026, 9, 11, 1, 0),
         updated_at=DEMO_NOW,
     )
     session.add_all(
@@ -651,55 +651,55 @@ def seed_demo(session: Session) -> Tender:
             "Confirm solution architecture",
             TaskStatus.DONE,
             "Cheryl Ng",
-            datetime(2026, 8, 20, 9, 0),
+            datetime(2026, 9, 13, 9, 0),
         ),
         _task(
             2,
             "Validate commercial assumptions",
             TaskStatus.DONE,
             "Finance",
-            datetime(2026, 8, 20, 10, 0),
+            datetime(2026, 9, 13, 10, 0),
         ),
         _task(
             3,
             "Check project references",
             TaskStatus.DONE,
             "Grace Lim",
-            datetime(2026, 8, 20, 11, 0),
+            datetime(2026, 9, 13, 11, 0),
         ),
         _task(
-            4, "Prepare pricing schedule", TaskStatus.DONE, "Bid Team", datetime(2026, 8, 21, 3, 0)
+            4, "Prepare pricing schedule", TaskStatus.DONE, "Bid Team", datetime(2026, 9, 14, 3, 0)
         ),
         _task(
             5,
             "Review security controls",
             TaskStatus.DONE,
             "Benjamin Lee",
-            datetime(2026, 8, 21, 4, 0),
+            datetime(2026, 9, 14, 4, 0),
         ),
         _task(
             6,
             "Assemble personnel evidence",
             TaskStatus.DONE,
             "Aisha Rahman",
-            datetime(2026, 8, 21, 4, 30),
+            datetime(2026, 9, 14, 4, 30),
         ),
         _task(
-            7, "Draft transition plan", TaskStatus.DONE, "Harish Nair", datetime(2026, 8, 21, 5, 0)
+            7, "Draft transition plan", TaskStatus.DONE, "Harish Nair", datetime(2026, 9, 14, 5, 0)
         ),
         _task(
             8,
             "Run mandatory-gate review",
             TaskStatus.DONE,
             "Grace Lim",
-            datetime(2026, 8, 21, 5, 0),
+            datetime(2026, 9, 14, 5, 0),
         ),
         _task(
             9,
             "Director declaration final review",
             TaskStatus.OPEN,
             "Managing Director",
-            datetime(2026, 8, 24, 9, 0),
+            datetime(2026, 9, 17, 9, 0),
             TaskPriority.HIGH,
             "REQ-R08-V1",
         ),
@@ -708,7 +708,7 @@ def seed_demo(session: Session) -> Tender:
             "Confirm briefing record in submission index",
             TaskStatus.OPEN,
             "Bid Team",
-            datetime(2026, 8, 25, 9, 0),
+            datetime(2026, 9, 18, 9, 0),
             TaskPriority.MEDIUM,
             "REQ-R05-V1",
         ),
@@ -746,7 +746,7 @@ def seed_demo(session: Session) -> Tender:
                 actor="system",
                 entity_id=entity_id,
                 summary=summary,
-                timestamp=datetime(2026, 8, 21, 4, 50 + index),
+                timestamp=datetime(2026, 9, 14, 4, 50 + index),
             )
         )
 
