@@ -156,7 +156,11 @@ function App() {
   if (loading) {
     return (
       <main className="loading-screen">
-        <img className="brand-logo brand-logo-loading" src="/kiasubid-mark.jpg" alt="KiasuBid" />
+        <img
+          className="brand-logo brand-logo-loading"
+          src={`${import.meta.env.BASE_URL}kiasubid-mark.jpg`}
+          alt="KiasuBid"
+        />
         <strong>KiasuBid AI</strong>
         <span>Loading bid state</span>
         <LoaderCircle className="spin" size={20} />
@@ -195,7 +199,7 @@ function App() {
       <nav className="topbar">
         <div className="brand-lockup">
           <span className="brand-wordmark" aria-label="KiasuBid AI">
-            <img src="/kiasubid-wordmark.jpg" alt="KiasuBid AI" />
+            <img src={`${import.meta.env.BASE_URL}kiasubid-wordmark.jpg`} alt="KiasuBid AI" />
           </span>
         </div>
         <div className="topbar-context">
